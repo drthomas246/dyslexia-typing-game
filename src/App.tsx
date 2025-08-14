@@ -7,6 +7,7 @@ import SettingsDrawerChakra from "@/components/SettingsDrawerChakra";
 import { useTypingEngine } from "@/hooks/useTypingEngine";
 import {
   AspectRatio,
+  Badge,
   Box,
   Button,
   Container,
@@ -28,10 +29,15 @@ export default function App() {
     sound: true,
     language: "ja",
     learningMode: false,
+    // ★追加：学習→リコール（二段階）
+    learnThenRecall: false,
   });
+
   const engine = useTypingEngine({
     durationSec: settings.durationSec,
     learningMode: settings.learningMode,
+    // ★追加：二段階学習フローをエンジンへ
+    learnThenRecall: settings.learnThenRecall,
   });
 
   const settingsDisc = useDisclosure();
@@ -40,7 +46,6 @@ export default function App() {
   // 終了を検知して開く（Enterに依存しない）
   useEffect(() => {
     if (engine.state.started && engine.state.finished) {
-      // 次フレームに開くとフォーカス移動が安定
       const id = setTimeout(() => setResultOpen(true), 0);
       return () => clearTimeout(id);
     }
@@ -71,8 +76,31 @@ export default function App() {
           wpm={engine.wpm}
           accuracy={engine.accuracy}
           timeLeftSec={engine.timeLeftSec}
-          combo={engine.state.combo} // ← state から取る
+          combo={engine.state.combo}
         />
+
+        {/* 学習モードの段階表示（任意） */}
+        {settings.learningMode &&
+          settings.learnThenRecall &&
+          engine.state.started &&
+          !engine.state.finished && (
+            <HStack>
+              <Badge
+                colorPalette={
+                  engine.state.learningPhase === "study" ? "blue" : "purple"
+                }
+                variant="solid"
+              >
+                {engine.state.learningPhase === "study"
+                  ? "学習（ヒント＋音声）"
+                  : "リコール（ヒント無し）"}
+              </Badge>
+              <Text fontSize="sm" color="fg.muted">
+                学習で正解 →
+                リコールへ。リコールで正解すると次の問題に進みます。
+              </Text>
+            </HStack>
+          )}
 
         {/* 日本語の問題文 */}
         <Box p="4" rounded="xl" borderWidth="1px" bg="bg.subtle">
@@ -113,7 +141,8 @@ export default function App() {
             showHint={engine.state.showHint}
           />
           <Text mt="3" fontSize="sm" color="fg.muted">
-            Space: next question / Enter: stop / Backspace: delete last
+            Space: next / Enter: stop / Backspace: delete / Tab: hint
+            (通常モードのみ)
           </Text>
         </Box>
 
@@ -125,7 +154,7 @@ export default function App() {
               engine.stop();
               return;
             }
-            engine.onKey(ch); // ← Tab/Space/Backspace/通常文字 すべてここで処理
+            engine.onKey(ch); // Tab/Space/Backspace/通常文字 すべてここで処理
           }}
           enabled={
             engine.state.started && !engine.state.finished && !resultOpen
@@ -138,6 +167,8 @@ export default function App() {
         onClose={settingsDisc.onClose}
         settings={settings}
         onChange={setSettings}
+        // ★追加：エンジンを渡して Drawer 側から study/recall を手動切替可能に
+        engine={engine}
       />
 
       <ResultsModalChakra
