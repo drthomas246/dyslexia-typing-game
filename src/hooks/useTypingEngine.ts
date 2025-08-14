@@ -1,49 +1,9 @@
 // src/hooks/useTypingEngine.ts
 import { useSpeech } from "@/hooks/useSpeech";
 import { judgeChar } from "@/lib/judge";
-import type { QAPair } from "@/lib/texts/qa_pairs";
 import QA from "@/lib/texts/qa_pairs";
+import type { EngineOptions, EngineState, QAPair } from "@/types/index";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-export type EngineOptions = {
-  /** プレイ時間（秒） */
-  durationSec: number;
-  /** 出題順のシード（省略時は現在時刻ベース） */
-  seed?: number;
-  /** タイマー更新間隔(ms) 既定=100ms */
-  tickMs?: number;
-  /** 学習モード：最初からヒント表示＆コンボ対象外＆タイマー停止 */
-  learningMode?: boolean;
-  /** 学習→リコールの二段階を有効化 */
-  learnThenRecall?: boolean;
-};
-
-export type EngineState = {
-  started: boolean;
-  finished: boolean;
-  startAt?: number;
-  questionImg?: string;
-
-  questionJa: string;
-  answerEn: string;
-
-  typed: string;
-  correctMap: boolean[];
-  showHint: boolean;
-
-  index: number;
-  hits: number;
-  errors: number;
-
-  combo: number;
-  problemHasMistake: boolean;
-  problemUsedHint: boolean;
-
-  /** Tabヒント段階: 0=未使用,1=音声済,2=表示済 */
-  hintStep: 0 | 1 | 2;
-  /** 学習モード時の段階: study=学習, recall=リコール */
-  learningPhase: "study" | "recall";
-};
 
 function mulberry32(a: number) {
   return function () {

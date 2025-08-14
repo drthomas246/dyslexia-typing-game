@@ -1,4 +1,5 @@
 // src/components/SettingsDrawerChakra.tsx
+import type { Settings, SettingsDrawerProps } from "@/types/index";
 import {
   Button,
   CloseButton,
@@ -9,28 +10,6 @@ import {
   Stack,
   Switch,
 } from "@chakra-ui/react";
-
-// エンジン連携の最小インターフェース（オプショナル）
-type EngineLike = {
-  state: { learningPhase: "study" | "recall" };
-  setLearningPhase: (p: "study" | "recall") => void;
-};
-
-export type Settings = {
-  durationSec: number; // プレイ時間
-  sound: boolean; // 効果音
-  language: string; // "en" | "ja" | ...
-  learningMode: boolean; // 学習モード（常時ヒント・タイマー停止）
-  learnThenRecall: boolean; // ★追加：学習→リコールの2段階を有効化
-};
-
-export type SettingsDrawerProps = {
-  open: boolean;
-  onClose: () => void;
-  settings: Settings;
-  onChange: (s: Settings) => void;
-  engine?: EngineLike; // ★追加：現在フェーズ表示と手動切替に使用（任意）
-};
 
 export default function SettingsDrawerChakra({
   open,

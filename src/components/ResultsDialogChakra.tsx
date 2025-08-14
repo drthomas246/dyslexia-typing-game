@@ -1,4 +1,5 @@
 // src/components/ResultsModalChakra.tsx
+import type { ResultsModalProps } from "@/types/index";
 import {
   Button,
   CloseButton,
@@ -7,13 +8,6 @@ import {
   Portal,
   Stat,
 } from "@chakra-ui/react";
-
-export type ResultsModalProps = {
-  open: boolean;
-  setOpen: (v: boolean) => void;
-  onRetry: () => void;
-  summary: { wpm: number; accuracy: number; timeSec: number; errors: number };
-};
 
 export default function ResultsModalChakra({
   open,

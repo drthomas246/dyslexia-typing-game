@@ -1,4 +1,4 @@
-export type JudgeResult = { ok: boolean; expected: string; received: string };
+import type { JudgeResult } from "@/types/index";
 
 const lowerIfAlpha = (ch: string) =>
   /[a-z]/i.test(ch) ? ch.toLowerCase() : ch;

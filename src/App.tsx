@@ -2,9 +2,9 @@ import AnswerInputView from "@/components/AnswerInputView";
 import HUDChakra from "@/components/HUDChakra";
 import InputCapture from "@/components/InputCapture";
 import ResultsModalChakra from "@/components/ResultsDialogChakra";
-import type { Settings } from "@/components/SettingsDrawerChakra";
 import SettingsDrawerChakra from "@/components/SettingsDrawerChakra";
 import { useTypingEngine } from "@/hooks/useTypingEngine";
+import type { Settings } from "@/types/index";
 import {
   AspectRatio,
   Badge,

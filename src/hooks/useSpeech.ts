@@ -1,16 +1,6 @@
 // src/lib/useSpeech.ts
+import type { SpeakOpts } from "@/types/index";
 import { useCallback, useEffect, useRef, useState } from "react";
-
-type SpeakOpts = {
-  lang?: string; // 既定: "en-US"
-  rate?: number; // 0.1 - 10 (既定 1)
-  pitch?: number; // 0 - 2 (既定 1)
-  voiceHint?: string; // 例: "en-US" / "en"
-  /** 同一テキストの短時間重複呼び出しを抑止する間隔(ms)。既定 500ms */
-  dedupeMs?: number;
-  /** デデュープを無効化（常に発話）したい時は true */
-  noDedupe?: boolean;
-};
 
 export function useSpeech() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);

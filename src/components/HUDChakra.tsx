@@ -1,12 +1,6 @@
 // src/components/HUDChakra.tsx
+import type { HUDProps } from "@/types/index";
 import { Box, HStack, Progress, SimpleGrid, Stat } from "@chakra-ui/react";
-
-export type HUDProps = {
-  wpm: number;
-  accuracy: number; // 0-100
-  timeLeftSec: number;
-  combo: number;
-};
 
 export default function HUDChakra({
   wpm,

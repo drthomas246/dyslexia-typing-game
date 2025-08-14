@@ -1,10 +1,14 @@
 // color-mode.tsx
-import type { IconButtonProps, SpanProps } from "@chakra-ui/react";
+import type {
+  ColorModeButtonProps,
+  ColorModeProviderProps,
+} from "@/types/index";
+import type { SpanProps } from "@chakra-ui/react";
 import { ClientOnly, IconButton, Skeleton, Span } from "@chakra-ui/react";
 import { ThemeProvider } from "next-themes";
 import * as React from "react";
 import { LuMoon, LuSun } from "react-icons/lu";
-import { useColorMode, type ColorModeProviderProps } from "./use-color-mode";
+import { useColorMode } from "./use-color-mode";
 
 export function ColorModeProvider(props: ColorModeProviderProps) {
   return (
@@ -19,7 +23,6 @@ export function ColorModeIcon(props: React.ComponentProps<typeof LuSun>) {
 }
 
 // 空の interface -> type エイリアスに変更（警告解消）
-export type ColorModeButtonProps = Omit<IconButtonProps, "aria-label">;
 
 export const ColorModeButton = React.forwardRef<
   HTMLButtonElement,

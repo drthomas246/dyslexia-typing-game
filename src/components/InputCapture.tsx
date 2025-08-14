@@ -1,14 +1,6 @@
 // src/components/InputCapture.tsx
+import type { InputCaptureProps } from "@/types/index";
 import { useEffect } from "react";
-
-export type InputCaptureProps = {
-  onKey: (ch: string, e: KeyboardEvent) => void;
-  enabled?: boolean;
-  handleEnter?: boolean; // 既定: true
-  handleBackspace?: boolean; // 既定: true
-  handleSpace?: boolean; // 既定: true
-  handleTab?: boolean; // 既定: false
-};
 
 export default function InputCapture({
   onKey,

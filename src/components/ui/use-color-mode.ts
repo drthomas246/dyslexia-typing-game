@@ -1,16 +1,6 @@
 // use-color-mode.ts
-import type { ThemeProviderProps } from "next-themes";
+import type { ColorMode, UseColorModeReturn } from "@/types/index";
 import { useTheme } from "next-themes";
-
-export type ColorModeProviderProps = ThemeProviderProps;
-
-export type ColorMode = "light" | "dark";
-
-export interface UseColorModeReturn {
-  colorMode: ColorMode;
-  setColorMode: (colorMode: ColorMode) => void;
-  toggleColorMode: () => void;
-}
 
 export function useColorMode(): UseColorModeReturn {
   const { resolvedTheme, setTheme, forcedTheme } = useTheme();
