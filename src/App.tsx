@@ -55,18 +55,18 @@ export default function App() {
     <Container p="6" maxW="container.md">
       <Stack gap="6">
         <HStack justify="space-between">
-          <Heading size="lg">Typing Game (Chakra v3)</Heading>
+          <Heading size="lg">タイピングゲーム</Heading>
           <HStack>
             <Button onClick={settingsDisc.onOpen} variant="outline">
-              Settings
+              せってい
             </Button>
             {!engine.state.started || engine.state.finished ? (
               <Button colorPalette="blue" onClick={engine.start}>
-                Start
+                はじめる
               </Button>
             ) : (
               <Button colorPalette="red" onClick={engine.stop}>
-                Stop
+                おわる
               </Button>
             )}
           </HStack>
@@ -92,8 +92,8 @@ export default function App() {
                 variant="solid"
               >
                 {engine.state.learningPhase === "study"
-                  ? "学習（ヒント＋音声）"
-                  : "リコール（ヒント無し）"}
+                  ? "れんしゅう（スペル＋音声）"
+                  : "ふくしゅう（Tabキーでヒント。1回目で音声・2回目でスペル）"}
               </Badge>
               <Text fontSize="sm" color="fg.muted">
                 学習で正解 →
@@ -111,7 +111,7 @@ export default function App() {
           >
             <GridItem>
               <Text fontSize={{ base: "md", md: "lg" }}>
-                {engine.state.questionJa || "Start to show a question."}
+                {engine.state.questionJa || "もんだいを ひょうじするよ"}
               </Text>
             </GridItem>
             <GridItem>
@@ -141,8 +141,8 @@ export default function App() {
             showHint={engine.state.showHint}
           />
           <Text mt="3" fontSize="sm" color="fg.muted">
-            Space: next / Enter: stop / Backspace: delete / Tab: hint
-            (通常モードのみ)
+            スペースキー: 次の単語 / エンターキー: とじる / バックスペースキー:
+            1文字けす / タブキー: ヒント (通常モードのみ)
           </Text>
         </Box>
 

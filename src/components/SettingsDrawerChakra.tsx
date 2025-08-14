@@ -55,7 +55,7 @@ export default function SettingsDrawerChakra({
         <Drawer.Positioner>
           <Drawer.Content roundedStart="l2">
             <Drawer.Header>
-              <Drawer.Title>Settings</Drawer.Title>
+              <Drawer.Title>せってい</Drawer.Title>
               <Drawer.CloseTrigger asChild>
                 <CloseButton size="sm" />
               </Drawer.CloseTrigger>
@@ -64,7 +64,7 @@ export default function SettingsDrawerChakra({
               <Stack gap="6">
                 {/* プレイ時間 */}
                 <Field.Root>
-                  <Field.Label>Game Duration (sec)</Field.Label>
+                  <Field.Label>ゲームのじかん (秒)</Field.Label>
                   <NumberInput.Root
                     value={String(settings.durationSec)}
                     min={15}
@@ -88,7 +88,7 @@ export default function SettingsDrawerChakra({
 
                 {/* 効果音 */}
                 <Field.Root>
-                  <Field.Label>Sound</Field.Label>
+                  <Field.Label>効果音</Field.Label>
                   <Switch.Root
                     checked={settings.sound}
                     onCheckedChange={(e) => set({ sound: e.checked })}
@@ -96,13 +96,15 @@ export default function SettingsDrawerChakra({
                   >
                     <Switch.HiddenInput />
                     <Switch.Control />
-                    <Switch.Label>Enable key/correct sounds</Switch.Label>
+                    <Switch.Label>
+                      ボタンをおしたり正解したときに音が出るようにする
+                    </Switch.Label>
                   </Switch.Root>
                 </Field.Root>
 
                 {/* 学習モード */}
                 <Field.Root>
-                  <Field.Label>Learning Mode</Field.Label>
+                  <Field.Label>れんしゅうモード</Field.Label>
                   <Switch.Root
                     checked={learningMode}
                     onCheckedChange={(e) => set({ learningMode: e.checked })}
@@ -110,18 +112,13 @@ export default function SettingsDrawerChakra({
                   >
                     <Switch.HiddenInput />
                     <Switch.Control />
-                    <Switch.Label>
-                      Show hints from start (combo disabled)
-                    </Switch.Label>
+                    <Switch.Label>れんしゅうモードにする</Switch.Label>
                   </Switch.Root>
-                  <Field.HelperText>
-                    学習モードでは最初から日本語と英語のヒントを表示します（この間はComboは加算されません）。タイマーは停止します。
-                  </Field.HelperText>
                 </Field.Root>
 
                 {/* 学習→リコール（2段階） */}
                 <Field.Root>
-                  <Field.Label>学習→リコール（2段階）</Field.Label>
+                  <Field.Label>れんしゅう→すぐふくしゅう（2段階）</Field.Label>
                   <Switch.Root
                     checked={learnThenRecall}
                     onCheckedChange={(e) => set({ learnThenRecall: e.checked })}
@@ -131,22 +128,16 @@ export default function SettingsDrawerChakra({
                     <Switch.HiddenInput />
                     <Switch.Control />
                     <Switch.Label>
-                      学習（ヒント表示・音声）後、ヒント無しで再入力
+                      れんしゅう（スペル＋音声）の後、すぐにふくしゅう（Tabキーヒントとあり）する
                     </Switch.Label>
                   </Switch.Root>
-                  <Field.HelperText>
-                    学習段階で正解すると、そのまま同じ問題をヒント無しで再入力（リコール）します。正解で次の問題へ進みます。
-                  </Field.HelperText>
                 </Field.Root>
               </Stack>
             </Drawer.Body>
 
             <Drawer.Footer>
               <Button variant="outline" onClick={onClose}>
-                Close
-              </Button>
-              <Button colorPalette="blue" onClick={onClose}>
-                Save
+                とじる
               </Button>
             </Drawer.Footer>
           </Drawer.Content>

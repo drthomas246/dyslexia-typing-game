@@ -33,7 +33,7 @@ export default function ResultsModalChakra({
         <Dialog.Positioner>
           <Dialog.Content rounded="xl">
             <Dialog.Header>
-              <Dialog.Title>Results</Dialog.Title>
+              <Dialog.Title>結果発表</Dialog.Title>
               <Dialog.CloseTrigger asChild>
                 <CloseButton size="sm" />
               </Dialog.CloseTrigger>
@@ -41,25 +41,25 @@ export default function ResultsModalChakra({
             <Dialog.Body>
               <HStack gap="6" wrap="wrap">
                 <Stat.Root>
-                  <Stat.Label>WPM</Stat.Label>
+                  <Stat.Label>1分間に打った単語の数</Stat.Label>
                   <Stat.ValueText fontSize="2xl">
                     {Math.round(summary.wpm)}
                   </Stat.ValueText>
                 </Stat.Root>
                 <Stat.Root>
-                  <Stat.Label>Accuracy</Stat.Label>
+                  <Stat.Label>正確さ</Stat.Label>
                   <Stat.ValueText fontSize="2xl">
                     {Math.round(summary.accuracy)}%
                   </Stat.ValueText>
                 </Stat.Root>
                 <Stat.Root>
-                  <Stat.Label>Time</Stat.Label>
+                  <Stat.Label>時間</Stat.Label>
                   <Stat.ValueText fontSize="2xl">
                     {summary.timeSec}s
                   </Stat.ValueText>
                 </Stat.Root>
                 <Stat.Root>
-                  <Stat.Label>Errors</Stat.Label>
+                  <Stat.Label>ミスした数</Stat.Label>
                   <Stat.ValueText fontSize="2xl">
                     {summary.errors}
                   </Stat.ValueText>
@@ -69,11 +69,11 @@ export default function ResultsModalChakra({
             <Dialog.Footer gap="2">
               <Dialog.ActionTrigger asChild>
                 <Button variant="outline" onClick={() => setOpen(false)}>
-                  Close
+                  とじる
                 </Button>
               </Dialog.ActionTrigger>
               <Button colorPalette="blue" onClick={onRetry}>
-                Retry
+                もういちどやる
               </Button>
             </Dialog.Footer>
           </Dialog.Content>

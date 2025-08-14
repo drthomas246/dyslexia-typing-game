@@ -79,7 +79,7 @@ export default function AnswerInputView({
 
       {typed.length === 0 && !showHint && (
         <Box as="span" color="fg.muted">
-          (type your answer here)
+          (押したキーがここに表示されるよ)
         </Box>
       )}
     </Box>
