@@ -1,0 +1,159 @@
+import AnswerInputView from "@/components/AnswerInputView";
+import HUDChakra from "@/components/HUDChakra";
+import InputCapture from "@/components/InputCapture";
+import ResultsModalChakra from "@/components/ResultsDialogChakra";
+import type { Settings } from "@/components/SettingsDrawerChakra";
+import SettingsDrawerChakra from "@/components/SettingsDrawerChakra";
+import { useTypingEngine } from "@/hooks/useTypingEngine";
+import {
+  AspectRatio,
+  Box,
+  Button,
+  Container,
+  Grid,
+  GridItem,
+  Heading,
+  HStack,
+  Image,
+  Skeleton,
+  Stack,
+  Text,
+  useDisclosure,
+} from "@chakra-ui/react";
+import { useEffect, useState } from "react";
+
+export default function App() {
+  const [settings, setSettings] = useState<Settings>({
+    durationSec: 60,
+    sound: true,
+    language: "ja",
+    learningMode: false,
+  });
+  const engine = useTypingEngine({
+    durationSec: settings.durationSec,
+    learningMode: settings.learningMode,
+  });
+
+  const settingsDisc = useDisclosure();
+  const [resultOpen, setResultOpen] = useState(false);
+
+  // 終了を検知して開く（Enterに依存しない）
+  useEffect(() => {
+    if (engine.state.started && engine.state.finished) {
+      // 次フレームに開くとフォーカス移動が安定
+      const id = setTimeout(() => setResultOpen(true), 0);
+      return () => clearTimeout(id);
+    }
+  }, [engine.state.started, engine.state.finished]);
+
+  return (
+    <Container p="6" maxW="container.md">
+      <Stack gap="6">
+        <HStack justify="space-between">
+          <Heading size="lg">Typing Game (Chakra v3)</Heading>
+          <HStack>
+            <Button onClick={settingsDisc.onOpen} variant="outline">
+              Settings
+            </Button>
+            {!engine.state.started || engine.state.finished ? (
+              <Button colorPalette="blue" onClick={engine.start}>
+                Start
+              </Button>
+            ) : (
+              <Button colorPalette="red" onClick={engine.stop}>
+                Stop
+              </Button>
+            )}
+          </HStack>
+        </HStack>
+
+        <HUDChakra
+          wpm={engine.wpm}
+          accuracy={engine.accuracy}
+          timeLeftSec={engine.timeLeftSec}
+          combo={engine.state.combo} // ← state から取る
+        />
+
+        {/* 日本語の問題文 */}
+        <Box p="4" rounded="xl" borderWidth="1px" bg="bg.subtle">
+          <Grid
+            templateColumns={{ base: "1fr", md: "1.2fr 1fr" }}
+            gap={4}
+            alignItems="center"
+          >
+            <GridItem>
+              <Text fontSize={{ base: "md", md: "lg" }}>
+                {engine.state.questionJa || "Start to show a question."}
+              </Text>
+            </GridItem>
+            <GridItem>
+              <AspectRatio ratio={1 / 1} maxW="200px">
+                {engine.state.questionImg ? (
+                  <Image
+                    src={engine.state.questionImg}
+                    alt={engine.state.questionJa}
+                    objectFit="contain"
+                    rounded="lg"
+                    borderWidth="1px"
+                  />
+                ) : (
+                  <Skeleton rounded="lg" />
+                )}
+              </AspectRatio>
+            </GridItem>
+          </Grid>
+        </Box>
+
+        {/* 入力文字の色分け表示 */}
+        <Box p="6" rounded="xl" borderWidth="1px" minH="140px">
+          <AnswerInputView
+            typed={engine.state.typed}
+            correctMap={engine.state.correctMap}
+            answer={engine.state.answerEn}
+            showHint={engine.state.showHint}
+          />
+          <Text mt="3" fontSize="sm" color="fg.muted">
+            Space: next question / Enter: stop / Backspace: delete last
+          </Text>
+        </Box>
+
+        {/* 入力キャプチャ（ダイアログ表示中は無効） */}
+        <InputCapture
+          onKey={(ch, e) => {
+            if (ch === "\n" && engine.state.started && !engine.state.finished) {
+              e.preventDefault();
+              engine.stop();
+              return;
+            }
+            engine.onKey(ch); // ← Tab/Space/Backspace/通常文字 すべてここで処理
+          }}
+          enabled={
+            engine.state.started && !engine.state.finished && !resultOpen
+          }
+        />
+      </Stack>
+
+      <SettingsDrawerChakra
+        open={settingsDisc.open}
+        onClose={settingsDisc.onClose}
+        settings={settings}
+        onChange={setSettings}
+      />
+
+      <ResultsModalChakra
+        open={resultOpen}
+        setOpen={setResultOpen}
+        onRetry={() => {
+          setResultOpen(false);
+          engine.start();
+        }}
+        summary={{
+          wpm: engine.wpm,
+          accuracy: engine.accuracy,
+          timeSec: settings.durationSec,
+          errors: engine.state.errors,
+        }}
+      />
+    </Container>
+  );
+}
