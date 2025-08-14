@@ -50,7 +50,21 @@ export default function App() {
       return () => clearTimeout(id);
     }
   }, [engine.state.started, engine.state.finished]);
+  const timeSecActual = (() => {
+    // startAt が無ければ念のため fallback
+    if (!engine.state.startAt) return settings.durationSec;
 
+    if (settings.learningMode) {
+      // 学習モードは timeLeftSec が固定なので、startAt からの実時間で計測
+      const now = Date.now();
+      const elapsed = Math.floor((now - engine.state.startAt) / 1000);
+      return Math.max(0, elapsed);
+    } else {
+      // 通常モードは timeLeftSec が減るので差分でOK
+      const elapsed = settings.durationSec - engine.timeLeftSec;
+      return Math.max(0, elapsed);
+    }
+  })();
   return (
     <Container p="6" maxW="container.md">
       <Stack gap="6">
@@ -181,7 +195,7 @@ export default function App() {
         summary={{
           wpm: engine.wpm,
           accuracy: engine.accuracy,
-          timeSec: settings.durationSec,
+          timeSec: timeSecActual,
           errors: engine.state.errors,
         }}
       />
