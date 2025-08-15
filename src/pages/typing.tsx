@@ -4,6 +4,7 @@ import HUDChakra from "@/components/HUDChakra";
 import InputCapture from "@/components/InputCapture";
 import ResultsModalChakra from "@/components/ResultsDialogChakra";
 import SettingsDrawerChakra from "@/components/SettingsDrawerChakra";
+import { useSpeech } from "@/hooks/useSpeech";
 import { useTypingEngine } from "@/hooks/useTypingEngine";
 import type { QAPair, Settings } from "@/types/index";
 import {
@@ -44,6 +45,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
     QA
   );
 
+  const { warmup, waitUntilReady } = useSpeech();
   const settingsDisc = useDisclosure();
   const [resultOpen, setResultOpen] = useState(false);
   const [page, setPage] = useState<"home" | "typing">("typing");
@@ -88,7 +90,15 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
               せってい
             </Button>
             {!engine.state.started || engine.state.finished ? (
-              <Button colorPalette="blue" onClick={engine.start}>
+              <Button
+                colorPalette="blue"
+                onClick={async () => {
+                  // 1) voices を待つ → 2) ウォームアップ → 3) エンジン開始
+                  await waitUntilReady();
+                  await warmup();
+                  engine.start();
+                }}
+              >
                 はじめる
               </Button>
             ) : (

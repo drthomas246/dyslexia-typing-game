@@ -4,7 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export function useSpeech() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [isReady, setIsReady] = useState(false); // ★追加: voices 準備状態
   const readyRef = useRef(false);
+
+  // voices 準備待ちの解放キュー
+  const readyWaiters = useRef<Array<() => void>>([]);
 
   // 直近に再生要求されたテキストと時刻（短時間の二重発火を抑止）
   const lastSpeakRef = useRef<{ text: string; at: number }>({
@@ -21,6 +25,12 @@ export function useSpeech() {
       if (v && v.length) {
         setVoices(v);
         readyRef.current = true;
+        setIsReady(true); // ★追加
+        // ★ voices を待っている呼び出しを解放
+        if (readyWaiters.current.length) {
+          readyWaiters.current.forEach((resolve) => resolve());
+          readyWaiters.current = [];
+        }
       }
     };
     load();
@@ -41,6 +51,33 @@ export function useSpeech() {
       // no-op
     }
   }, []);
+
+  // ★追加: voices 準備完了を待つ（最長 ~1s で解放）
+  const waitUntilReady = useCallback((): Promise<void> => {
+    if (readyRef.current) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      readyWaiters.current.push(resolve);
+      // 念のためのタイムアウト保険（1秒）
+      setTimeout(() => resolve(), 1000);
+    });
+  }, []);
+
+  // ★追加: TTS ウォームアップ（無音の極短発話でエンジンを起動）
+  const warmup = useCallback(async () => {
+    try {
+      await waitUntilReady();
+      speechSynthesis.cancel(); // 前残りを掃除
+      const u = new SpeechSynthesisUtterance(".");
+      u.lang = "en-US";
+      u.rate = 1;
+      u.pitch = 1;
+      u.volume = 0; // 無音
+      speechSynthesis.speak(u);
+      // すぐ cancel せず、onendに任せる方が安定
+    } catch {
+      // no-op
+    }
+  }, [waitUntilReady]);
 
   const speak = useCallback(
     (text: string, opts: SpeakOpts = {}) => {
@@ -116,5 +153,6 @@ export function useSpeech() {
     [voices, stop]
   );
 
-  return { speak, stop, voices };
+  // ★拡張: isReady, waitUntilReady, warmup を公開
+  return { speak, stop, voices, isReady, waitUntilReady, warmup };
 }
