@@ -1,14 +1,24 @@
+import { useSpeech } from "@/hooks/useSpeech";
 import QA_MONTH from "@/lib/texts/qa_month";
 import QA_NUMBER from "@/lib/texts/qa_number";
 import QA_TEST from "@/lib/texts/qa_test";
 import { Button, Container, Heading, HStack, Stack } from "@chakra-ui/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Typing from "./pages/typing";
 
 export default function App() {
   const [page, setPage] = useState<"home" | "test" | "number" | "month">(
     "home"
   );
+  const { warmup, waitUntilReady } = useSpeech();
+  useEffect(() => {
+    async function fetchData() {
+      await waitUntilReady();
+      await warmup();
+    }
+    fetchData();
+    console.log("App mounted");
+  }, [warmup, waitUntilReady]);
   switch (page) {
     case "test":
       return <Typing QA={QA_TEST} title="Test問題" />;
