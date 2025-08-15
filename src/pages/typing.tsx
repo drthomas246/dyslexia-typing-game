@@ -79,7 +79,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
     <Container p="6" maxW="container.md">
       <Stack gap="6">
         <HStack justify="space-between">
-          <Heading size="lg">タイピングゲーム -{title}-</Heading>
+          <Heading size="lg">タイピングゲーム ～{title}～</Heading>
           <HStack>
             <Button onClick={() => setPage("home")} variant="outline">
               もどる
