@@ -31,6 +31,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
     learningMode: true,
     // 学習→リコール（二段階）
     learnThenRecall: true,
+    orderMode: "sequential",
   });
 
   const engine = useTypingEngine(
@@ -39,6 +40,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
       learningMode: settings.learningMode,
       // 二段階学習フローをエンジンへ
       learnThenRecall: settings.learnThenRecall,
+      randomOrder: settings.orderMode === "random",
     },
     QA
   );
@@ -84,15 +86,15 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
               もどる
             </Button>
             <Button onClick={settingsDisc.onOpen} variant="outline">
-              せってい
+              せっ定
             </Button>
             {!engine.state.started || engine.state.finished ? (
               <Button colorPalette="blue" onClick={engine.start}>
-                はじめる
+                始める
               </Button>
             ) : (
               <Button colorPalette="red" onClick={engine.stop}>
-                おわる
+                終わる
               </Button>
             )}
           </HStack>
@@ -118,12 +120,12 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
                 variant="solid"
               >
                 {engine.state.learningPhase === "study"
-                  ? "れんしゅう（スペル＋音声）"
-                  : "ふくしゅう（Tabキーでヒント。1回目で音声・2回目でスペル）"}
+                  ? "練習（スペル＋音声）"
+                  : "ふく習（Tabキーでヒント。1回目で音声・2回目でスペル）"}
               </Badge>
               <Text fontSize="sm" color="fg.muted">
-                学習で正解 →
-                リコールへ。リコールで正解すると次の問題に進みます。
+                学習で正かい →
+                ふく習へ。ふく習で正かいすると次の問題に進みます。
               </Text>
             </HStack>
           )}
@@ -137,7 +139,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
           >
             <GridItem>
               <Text fontSize={{ base: "md", md: "lg" }}>
-                {engine.state.questionJa || "もんだいを ひょうじするよ"}
+                {engine.state.questionJa || "問題を 表じするよ"}
               </Text>
             </GridItem>
             <GridItem>
@@ -167,8 +169,8 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
             showHint={engine.state.showHint}
           />
           <Text mt="3" fontSize="sm" color="fg.muted">
-            スペースキー: 次の単語 / エンターキー: とじる / バックスペースキー:
-            1文字けす / タブキー: ヒント (通常モードのみ)
+            スペースキー: 次のたん語 / エンターキー: とじる /
+            バックスペースキー: 1文字消す / タブキー: ヒント
           </Text>
         </Box>
 

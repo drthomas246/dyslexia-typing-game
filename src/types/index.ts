@@ -60,6 +60,7 @@ export type Settings = {
   language: string; // "en" | "ja" | ...
   learningMode: boolean; // 学習モード（常時ヒント・タイマー停止）
   learnThenRecall: boolean; // ★追加：学習→リコールの2段階を有効化
+  orderMode: "random" | "sequential";
 };
 
 export type SettingsDrawerProps = {
@@ -92,6 +93,8 @@ export type EngineOptions = {
   learningMode?: boolean;
   /** 学習→リコールの二段階を有効化 */
   learnThenRecall?: boolean;
+  /** ★追加：true=ランダム / false=並び順（既定 false） */
+  randomOrder?: boolean;
 };
 
 export type EngineState = {

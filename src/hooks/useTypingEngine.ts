@@ -58,8 +58,9 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
   const initOrder = useCallback(() => {
     const seed = opts.seed ?? Date.now() % 1_000_000;
     const indices = Array.from({ length: QA.length }, (_, i) => i);
-    setOrder(shuffle(indices, seed));
-  }, [opts.seed, QA.length]);
+    const useRandom = opts.randomOrder ?? true;
+    setOrder(useRandom ? shuffle(indices, seed) : indices);
+  }, [opts.seed, QA.length, opts.randomOrder]);
 
   const loadPair = useCallback(
     (nextIdx: number) => {

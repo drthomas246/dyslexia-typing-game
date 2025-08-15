@@ -27,7 +27,7 @@ export default function ResultsModalChakra({
         <Dialog.Positioner>
           <Dialog.Content rounded="xl">
             <Dialog.Header>
-              <Dialog.Title>結果発表</Dialog.Title>
+              <Dialog.Title>けっか発表</Dialog.Title>
               <Dialog.CloseTrigger asChild>
                 <CloseButton size="sm" />
               </Dialog.CloseTrigger>
@@ -35,13 +35,13 @@ export default function ResultsModalChakra({
             <Dialog.Body>
               <HStack gap="6" wrap="wrap">
                 <Stat.Root>
-                  <Stat.Label>1分間に打った単語の数</Stat.Label>
+                  <Stat.Label>1分間に打った たん語の数</Stat.Label>
                   <Stat.ValueText fontSize="2xl">
                     {Math.round(summary.wpm)}
                   </Stat.ValueText>
                 </Stat.Root>
                 <Stat.Root>
-                  <Stat.Label>正確さ</Stat.Label>
+                  <Stat.Label>正かくさ</Stat.Label>
                   <Stat.ValueText fontSize="2xl">
                     {Math.round(summary.accuracy)}%
                   </Stat.ValueText>
@@ -67,7 +67,7 @@ export default function ResultsModalChakra({
                 </Button>
               </Dialog.ActionTrigger>
               <Button colorPalette="blue" onClick={onRetry}>
-                もういちどやる
+                もう一度やる
               </Button>
             </Dialog.Footer>
           </Dialog.Content>

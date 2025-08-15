@@ -5,8 +5,10 @@ import {
   CloseButton,
   Drawer,
   Field,
+  HStack,
   NumberInput,
   Portal,
+  RadioGroup,
   Stack,
   Switch,
 } from "@chakra-ui/react";
@@ -34,7 +36,7 @@ export default function SettingsDrawerChakra({
         <Drawer.Positioner>
           <Drawer.Content roundedStart="l2">
             <Drawer.Header>
-              <Drawer.Title>せってい</Drawer.Title>
+              <Drawer.Title>せっ定</Drawer.Title>
               <Drawer.CloseTrigger asChild>
                 <CloseButton size="sm" />
               </Drawer.CloseTrigger>
@@ -43,7 +45,7 @@ export default function SettingsDrawerChakra({
               <Stack gap="6">
                 {/* プレイ時間 */}
                 <Field.Root>
-                  <Field.Label>ゲームのじかん (秒)</Field.Label>
+                  <Field.Label>ゲームの時間 (秒)</Field.Label>
                   <NumberInput.Root
                     value={String(settings.durationSec)}
                     min={15}
@@ -62,12 +64,39 @@ export default function SettingsDrawerChakra({
                     <NumberInput.Control />
                     <NumberInput.Input />
                   </NumberInput.Root>
-                  <Field.HelperText>15〜600 の範囲</Field.HelperText>
+                  <Field.HelperText>15〜600 秒の間</Field.HelperText>
+                </Field.Root>
+
+                <Field.Root>
+                  <Field.Label>じゅん番</Field.Label>
+                  <RadioGroup.Root
+                    value={settings.orderMode}
+                    onValueChange={(e) =>
+                      set({ orderMode: e.value as "random" | "sequential" })
+                    }
+                  >
+                    <HStack gap="6">
+                      <RadioGroup.Item value="random">
+                        <RadioGroup.ItemHiddenInput />
+                        <RadioGroup.ItemIndicator />
+                        <RadioGroup.ItemText>ばらばら</RadioGroup.ItemText>
+                      </RadioGroup.Item>
+                      <RadioGroup.Item value="sequential">
+                        <RadioGroup.ItemHiddenInput />
+                        <RadioGroup.ItemIndicator />
+                        <RadioGroup.ItemText>ならびじゅん</RadioGroup.ItemText>
+                      </RadioGroup.Item>
+                    </HStack>
+                  </RadioGroup.Root>
+                  <Field.HelperText>
+                    ばらばらは じゅん番を入れかえます。ならびじゅんは
+                    じゅん番通りです。
+                  </Field.HelperText>
                 </Field.Root>
 
                 {/* 効果音 */}
-                <Field.Root>
-                  <Field.Label>効果音</Field.Label>
+                <Field.Root disabled>
+                  <Field.Label>こうか音</Field.Label>
                   <Switch.Root
                     checked={settings.sound}
                     onCheckedChange={(e) => set({ sound: e.checked })}
@@ -76,14 +105,14 @@ export default function SettingsDrawerChakra({
                     <Switch.HiddenInput />
                     <Switch.Control />
                     <Switch.Label>
-                      ボタンをおしたり正解したときに音が出るようにする
+                      ボタンをおしたり正かいしたときに音が出るようにする
                     </Switch.Label>
                   </Switch.Root>
                 </Field.Root>
 
                 {/* 学習モード */}
                 <Field.Root>
-                  <Field.Label>れんしゅうモード</Field.Label>
+                  <Field.Label>練習モード</Field.Label>
                   <Switch.Root
                     checked={learningMode}
                     onCheckedChange={(e) => set({ learningMode: e.checked })}
@@ -91,13 +120,13 @@ export default function SettingsDrawerChakra({
                   >
                     <Switch.HiddenInput />
                     <Switch.Control />
-                    <Switch.Label>れんしゅうモードにする</Switch.Label>
+                    <Switch.Label>練習モードにする</Switch.Label>
                   </Switch.Root>
                 </Field.Root>
 
                 {/* 学習→リコール（2段階） */}
                 <Field.Root>
-                  <Field.Label>れんしゅう→すぐふくしゅう（2段階）</Field.Label>
+                  <Field.Label>練習→ふく習→次の問題（2だん階）</Field.Label>
                   <Switch.Root
                     checked={learnThenRecall}
                     onCheckedChange={(e) => set({ learnThenRecall: e.checked })}
@@ -107,7 +136,7 @@ export default function SettingsDrawerChakra({
                     <Switch.HiddenInput />
                     <Switch.Control />
                     <Switch.Label>
-                      れんしゅう（スペル＋音声）の後、すぐにふくしゅう（Tabキーヒントとあり）する
+                      練習（スペル＋音声）の後、すぐにふく習（Tabキーヒントあり）をする
                     </Switch.Label>
                   </Switch.Root>
                 </Field.Root>

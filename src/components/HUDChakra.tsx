@@ -12,14 +12,14 @@ export default function HUDChakra({
     <Box p="4" rounded="xl" borderWidth="1px" bg="bg" shadow="sm">
       <SimpleGrid columns={{ base: 2, md: 4 }} gap="4">
         <Stat.Root>
-          <Stat.Label>1分間に打った単語の数</Stat.Label>
+          <Stat.Label>1分間に打った たん語の数</Stat.Label>
           <Stat.ValueText fontSize="3xl" fontWeight="bold">
             {Math.max(0, Math.round(wpm))}
           </Stat.ValueText>
         </Stat.Root>
 
         <Stat.Root>
-          <Stat.Label>正確さ</Stat.Label>
+          <Stat.Label>正かくさ</Stat.Label>
           <HStack>
             <Stat.ValueText>
               {Math.max(0, Math.min(100, Math.round(accuracy)))}%
