@@ -86,7 +86,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
               もどる
             </Button>
             <Button onClick={settingsDisc.onOpen} variant="outline">
-              せっ定
+              せってい
             </Button>
             {!engine.state.started || engine.state.finished ? (
               <Button colorPalette="blue" onClick={engine.start}>
@@ -139,7 +139,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
           >
             <GridItem>
               <Text fontSize={{ base: "md", md: "lg" }}>
-                {engine.state.questionJa || "問題を 表じするよ"}
+                {engine.state.questionJa || "問題がここに出るよ"}
               </Text>
             </GridItem>
             <GridItem>

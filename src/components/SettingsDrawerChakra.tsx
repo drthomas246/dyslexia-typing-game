@@ -20,8 +20,6 @@ export default function SettingsDrawerChakra({
   onChange,
 }: SettingsDrawerProps) {
   const set = (patch: Partial<Settings>) => onChange({ ...settings, ...patch });
-
-  const learningMode = settings.learningMode;
   const learnThenRecall = settings.learnThenRecall;
 
   return (
@@ -36,7 +34,7 @@ export default function SettingsDrawerChakra({
         <Drawer.Positioner>
           <Drawer.Content roundedStart="l2">
             <Drawer.Header>
-              <Drawer.Title>せっ定</Drawer.Title>
+              <Drawer.Title>せってい</Drawer.Title>
               <Drawer.CloseTrigger asChild>
                 <CloseButton size="sm" />
               </Drawer.CloseTrigger>
@@ -112,16 +110,29 @@ export default function SettingsDrawerChakra({
 
                 {/* 学習モード */}
                 <Field.Root>
-                  <Field.Label>練習モード</Field.Label>
-                  <Switch.Root
-                    checked={learningMode}
-                    onCheckedChange={(e) => set({ learningMode: e.checked })}
-                    colorPalette="blue"
+                  <Field.Label>遊び方</Field.Label>
+                  <RadioGroup.Root
+                    value={settings.learningMode ? "learning" : "testing"}
+                    onValueChange={(e) =>
+                      set({ learningMode: e.value === "learning" })
+                    }
                   >
-                    <Switch.HiddenInput />
-                    <Switch.Control />
-                    <Switch.Label>練習モードにする</Switch.Label>
-                  </Switch.Root>
+                    <HStack gap="6">
+                      <RadioGroup.Item value="learning">
+                        <RadioGroup.ItemHiddenInput />
+                        <RadioGroup.ItemIndicator />
+                        <RadioGroup.ItemText>練習</RadioGroup.ItemText>
+                      </RadioGroup.Item>
+                      <RadioGroup.Item value="testing">
+                        <RadioGroup.ItemHiddenInput />
+                        <RadioGroup.ItemIndicator />
+                        <RadioGroup.ItemText>テスト</RadioGroup.ItemText>
+                      </RadioGroup.Item>
+                    </HStack>
+                  </RadioGroup.Root>
+                  <Field.HelperText>
+                    練習は答えがあるので、それを打ちます。テストは答えがないので自分で思い出して打ちます。
+                  </Field.HelperText>
                 </Field.Root>
 
                 {/* 学習→リコール（2段階） */}
@@ -131,7 +142,7 @@ export default function SettingsDrawerChakra({
                     checked={learnThenRecall}
                     onCheckedChange={(e) => set({ learnThenRecall: e.checked })}
                     colorPalette="blue"
-                    disabled={!learningMode}
+                    disabled={!settings.learningMode}
                   >
                     <Switch.HiddenInput />
                     <Switch.Control />

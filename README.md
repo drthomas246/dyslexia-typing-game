@@ -14,19 +14,20 @@
 - **Voice Synthesis**: Automatic voice synthesis using the Web Speech API.
 - **Score Tracking**: Measures the number of correct answers, mistakes, and elapsed time.
 - **Responsive Design**: Play comfortably on PCs and tablets.
+- **Can be used from elementary school middle grades** Only kanji learned up to the third grade of elementary school are used.
 
 ## System Requirements
 
 - **Browser**: Google Chrome latest version recommended (Speech Synthesis API compatible browser)
 - **Node.js**: v18 or higher (for local development)
-- **OS**: Windows / macOS / Linux / android / ios
+- **OS**: Windows / macOS / Linux / chromebook
 
 ## Installation Method
 
 ```bash
 # Clone the repository
 git clone https://github.com/drthomas246/dyslexia-typing-game.git
-cd typing-game
+cd dyslexia-typing-game
 # Install dependencies
 npm install
 # Start the development server
@@ -39,11 +40,12 @@ npm run dev
 2. Type the given word using the keyboard.
 3. If you answer correctly, you will proceed to the next question.
 4. If you enable learning mode, the Japanese translation and English will be displayed from the beginning.
-5. The given word will be read aloud automatically (supported browsers only).
+5. The given word will be read aloud automatically (supported browsers only)
 
 ## Settings
 
-- Register questions and translations in `src/lib/texts/qa_pairs.ts`.
+- Create a file with questions and translations based on `src/lib/texts/qa_test.ts`.
+- Import the file you created above into App.tsx and place the button.
 - Change audio settings (language code, speed, voice quality) using the `useSpeech` hook.
 - UI themes and colors can be changed in `src/styles`.
 
@@ -52,7 +54,6 @@ npm run dev
 - Implemented using React + TypeScript.
 - State management uses React Hooks.
 - Uses `SpeechSynthesisUtterance` for voice playback.
-- Component structure and customization procedures are described in `docs/development.md` (to be created separately).
 
 ## License
 
