@@ -3,7 +3,7 @@ import QA_MONTH from "@/lib/texts/qa_month";
 import QA_NUMBER from "@/lib/texts/qa_number";
 import QA_TEST from "@/lib/texts/qa_test";
 import { Button, Container, Heading, HStack, Stack } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Typing from "./pages/typing";
 
 export default function App() {
@@ -11,14 +11,13 @@ export default function App() {
     "home"
   );
   const { warmup, waitUntilReady } = useSpeech();
-  useEffect(() => {
-    async function fetchData() {
-      await waitUntilReady();
-      await warmup();
-    }
-    fetchData();
-    console.log("App mounted");
-  }, [warmup, waitUntilReady]);
+  const go = (dest: typeof page) => async () => {
+    // ここはユーザー操作（クリック）内
+    await waitUntilReady(); // voices が来るまで真に待つ（実装側でタイムアウトを外すこと推奨）
+    await warmup(); // 無音1発でTTSを起こす
+    setPage(dest); // その後にTypingへ遷移
+  };
+
   switch (page) {
     case "test":
       return <Typing QA={QA_TEST} title="Test問題" />;
@@ -32,8 +31,8 @@ export default function App() {
       <Stack justify="space-between" gap="6">
         <Heading size="4xl">タイピングゲーム</Heading>
         <HStack>
-          <Button onClick={() => setPage("number")}>1～10までの数字</Button>
-          <Button onClick={() => setPage("month")}>月の名前</Button>
+          <Button onClick={go("number")}>1～10までの数字</Button>
+          <Button onClick={go("month")}>月の名前</Button>
         </HStack>
       </Stack>
     </Container>

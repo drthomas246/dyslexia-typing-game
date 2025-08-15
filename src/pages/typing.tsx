@@ -23,22 +23,21 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-
 export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
   const [settings, setSettings] = useState<Settings>({
     durationSec: 60,
     sound: true,
     language: "ja",
-    learningMode: false,
-    // ★追加：学習→リコール（二段階）
-    learnThenRecall: false,
+    learningMode: true,
+    // 学習→リコール（二段階）
+    learnThenRecall: true,
   });
 
   const engine = useTypingEngine(
     {
       durationSec: settings.durationSec,
       learningMode: settings.learningMode,
-      // ★追加：二段階学習フローをエンジンへ
+      // 二段階学習フローをエンジンへ
       learnThenRecall: settings.learnThenRecall,
     },
     QA
@@ -194,7 +193,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
         onClose={settingsDisc.onClose}
         settings={settings}
         onChange={setSettings}
-        // ★追加：エンジンを渡して Drawer 側から study/recall を手動切替可能に
+        // エンジンを渡して Drawer 側から study/recall を手動切替可能に
         engine={engine}
       />
 
