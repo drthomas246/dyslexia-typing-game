@@ -1,7 +1,6 @@
 // src/hooks/useTypingEngine.ts
 import { useSpeech } from "@/hooks/useSpeech";
 import { judgeChar } from "@/lib/judge";
-import QA from "@/lib/texts/qa_pairs";
 import type { EngineOptions, EngineState, QAPair } from "@/types/index";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -18,7 +17,7 @@ function shuffle<T>(arr: T[], seed: number) {
   return [...arr].sort(() => rng() - 0.5);
 }
 
-export function useTypingEngine(opts: EngineOptions) {
+export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
   const tickMs = Math.max(16, opts.tickMs ?? 100);
   const { speak } = useSpeech();
 
@@ -60,7 +59,7 @@ export function useTypingEngine(opts: EngineOptions) {
     const seed = opts.seed ?? Date.now() % 1_000_000;
     const indices = Array.from({ length: QA.length }, (_, i) => i);
     setOrder(shuffle(indices, seed));
-  }, [opts.seed]);
+  }, [opts.seed, QA.length]);
 
   const loadPair = useCallback(
     (nextIdx: number) => {
@@ -82,7 +81,7 @@ export function useTypingEngine(opts: EngineOptions) {
         learningPhase: "study",
       }));
     },
-    [order, opts.learningMode]
+    [order, opts.learningMode, QA]
   );
 
   const start = useCallback(() => {
@@ -196,7 +195,7 @@ export function useTypingEngine(opts: EngineOptions) {
         learningPhase: "study",
       };
     });
-  }, [order, opts.learningMode]);
+  }, [order, opts.learningMode, QA]);
 
   const stop = useCallback(() => {
     setState((s) => ({ ...s, finished: true }));
