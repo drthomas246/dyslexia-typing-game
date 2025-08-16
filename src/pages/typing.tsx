@@ -1,6 +1,5 @@
 import App from "@/App";
 import AnswerInputView from "@/components/AnswerInputView";
-import HUDChakra from "@/components/HUDChakra";
 import InputCapture from "@/components/InputCapture";
 import ResultsModalChakra from "@/components/ResultsDialogChakra";
 import SettingsDrawerChakra from "@/components/SettingsDrawerChakra";
@@ -12,8 +11,6 @@ import {
   Box,
   Button,
   Container,
-  Grid,
-  GridItem,
   Heading,
   HStack,
   Image,
@@ -22,8 +19,11 @@ import {
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
+  // 敵の大画像（QA画像とは別）
+  const ENEMY_IMG = "./images/monster/slime.png";
+
   const [settings, setSettings] = useState<Settings>({
     durationSec: 60,
     sound: true,
@@ -41,6 +41,11 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
       // 二段階学習フローをエンジンへ
       learnThenRecall: settings.learnThenRecall,
       randomOrder: settings.orderMode === "random",
+      battleMode: true, // ★バトルON
+      playerMaxHp: 100,
+      enemyMaxHp: 100,
+      damagePerHit: 2, // 正解1打で敵 -2
+      damagePerMiss: 5, // ミス1打で自 -5
     },
     QA
   );
@@ -56,6 +61,16 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
       return () => clearTimeout(id);
     }
   }, [engine.state.started, engine.state.finished]);
+
+  // HP率（0〜100）
+  const enemyHpPct = useMemo(
+    () => Math.round((engine.state.enemyHp / engine.state.enemyMaxHp) * 100),
+    [engine.state.enemyHp, engine.state.enemyMaxHp]
+  );
+  const playerHpPct = useMemo(
+    () => Math.round((engine.state.playerHp / engine.state.playerMaxHp) * 100),
+    [engine.state.playerHp, engine.state.playerMaxHp]
+  );
   const timeSecActual = (() => {
     // startAt が無ければ念のため fallback
     if (!engine.state.startAt) return settings.durationSec;
@@ -79,7 +94,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
   return (
     <Container p="6" maxW="container.md">
       <Stack gap="6">
-        <HStack justify="space-between">
+        <HStack justify="space-between" h="40px">
           <Heading size="lg">タイピングゲーム ～{title}～</Heading>
           <HStack>
             <Button onClick={() => setPage("home")} variant="outline">
@@ -100,79 +115,113 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
           </HStack>
         </HStack>
 
-        <HUDChakra
-          wpm={engine.wpm}
-          accuracy={engine.accuracy}
-          timeLeftSec={engine.timeLeftSec}
-          combo={engine.state.combo}
-        />
+        {/* 敵エリア */}
+        <Box
+          rounded="xl"
+          borderWidth="1px"
+          p="4"
+          bg="bg.subtle"
+          h="calc(100vh - 293px)"
+        >
+          <HStack gap="4" h="calc(100vh - 367px)" mb="16px">
+            {/* 大きな敵スプライト（固定画像） */}
+            <Box
+              mx="auto"
+              w="100%"
+              h="calc(100vh - 367px)"
+              rounded="2xl"
+              borderWidth="1px"
+              overflow="hidden"
+              bg="blackAlpha.50"
+            >
+              <Image
+                src={ENEMY_IMG}
+                alt="Enemy"
+                fit="contain"
+                w="100%"
+                h="calc(100vh - 351px)"
+              />
+            </Box>
+            <Box w="450px">
+              {/* 敵のセリフ（日本語） */}
+              <Box rounded="lg" borderWidth="1px" p="3" bg="whiteAlpha.800">
+                <Text fontSize={{ base: "lg", md: "xl" }}>
+                  {engine.state.questionJa || "はじめるでせんとう開始！"}
+                </Text>
+              </Box>
 
-        {/* 学習モードの段階表示（任意） */}
-        {settings.learningMode &&
-          settings.learnThenRecall &&
-          engine.state.started &&
-          !engine.state.finished && (
-            <HStack>
-              <Badge
-                colorPalette={
-                  engine.state.learningPhase === "study" ? "blue" : "purple"
-                }
-                variant="solid"
-              >
-                {engine.state.learningPhase === "study"
-                  ? "練習（スペル＋音声）"
-                  : "ふく習（Tabキーでヒント。1回目で音声・2回目でスペル）"}
-              </Badge>
-              <Text fontSize="sm" color="fg.muted">
-                学習で正かい →
-                ふく習へ。ふく習で正かいすると次の問題に進みます。
-              </Text>
-            </HStack>
-          )}
-
-        {/* 日本語の問題文 */}
-        <Box p="4" rounded="xl" borderWidth="1px" bg="bg.subtle">
-          <Grid
-            templateColumns={{ base: "1fr", md: "1.2fr 1fr" }}
-            gap={4}
-            alignItems="center"
-          >
-            <GridItem>
-              <Text fontSize={{ base: "md", md: "lg" }}>
-                {engine.state.questionJa || "問題がここに出るよ"}
-              </Text>
-            </GridItem>
-            <GridItem>
-              <AspectRatio ratio={1 / 1} maxW="200px">
-                {engine.state.questionImg ? (
-                  <Image
-                    src={engine.state.questionImg}
-                    alt={engine.state.questionJa}
-                    objectFit="contain"
-                    rounded="lg"
-                    borderWidth="1px"
-                  />
-                ) : (
-                  <Skeleton rounded="lg" />
-                )}
-              </AspectRatio>
-            </GridItem>
-          </Grid>
+              {/* ★ 追加：QAの画像（ヒント用）。セリフの下に表示 */}
+              <Box mt="16px">
+                <AspectRatio ratio={1 / 1} w="200px" mx="auto">
+                  {engine.state.questionImg ? (
+                    <Image
+                      src={engine.state.questionImg}
+                      alt={engine.state.questionJa || "question image"}
+                      objectFit="contain"
+                      rounded="lg"
+                      borderWidth="1px"
+                      bg="white"
+                      p="2"
+                    />
+                  ) : (
+                    <Skeleton rounded="lg" />
+                  )}
+                </AspectRatio>
+              </Box>
+            </Box>
+          </HStack>
+          {/* 敵HPバー（大きめ） */}
+          <HStack gap="3" align="center">
+            <Badge colorPalette="purple" variant="solid">
+              てきのHP
+            </Badge>
+            <Box
+              flex="1"
+              h="18px"
+              rounded="full"
+              bg="blackAlpha.200"
+              overflow="hidden"
+            >
+              <Box h="full" w={`${enemyHpPct}%`} bg="purple.500" />
+            </Box>
+            <Text w="96px" textAlign="right">
+              {engine.state.enemyHp}/{engine.state.enemyMaxHp}
+            </Text>
+          </HStack>
         </Box>
 
-        {/* 入力文字の色分け表示 */}
-        <Box p="6" rounded="xl" borderWidth="1px" minH="140px">
+        {/* 入力ビュー（英語で回答） */}
+        <Box p="4" rounded="xl" borderWidth="1px" bg="bg.panel" h="109px">
           <AnswerInputView
             typed={engine.state.typed}
             correctMap={engine.state.correctMap}
             answer={engine.state.answerEn}
             showHint={engine.state.showHint}
           />
-          <Text mt="3" fontSize="sm" color="fg.muted">
+          <Text mt="2" fontSize="sm" color="fg.muted">
             スペースキー: 次のたん語 / エンターキー: とじる /
             バックスペースキー: 1文字消す / タブキー: ヒント
           </Text>
         </Box>
+
+        {/* 自分HPバー */}
+        <HStack gap="3" align="center">
+          <Badge colorPalette="blue" variant="solid">
+            あなたのHP
+          </Badge>
+          <Box
+            flex="1"
+            h="18px"
+            rounded="full"
+            bg="blackAlpha.200"
+            overflow="hidden"
+          >
+            <Box h="full" w={`${playerHpPct}%`} bg="blue.500" />
+          </Box>
+          <Text w="96px" textAlign="right">
+            {engine.state.playerHp}/{engine.state.playerMaxHp}
+          </Text>
+        </HStack>
 
         {/* 入力キャプチャ（ダイアログ表示中は無効） */}
         <InputCapture

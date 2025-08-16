@@ -33,6 +33,7 @@ export default function App() {
         <HStack>
           <Button onClick={go("number")}>1～10までの数字</Button>
           <Button onClick={go("month")}>月の名前</Button>
+          <Button onClick={go("test")}>テスト問題</Button>
         </HStack>
       </Stack>
     </Container>
