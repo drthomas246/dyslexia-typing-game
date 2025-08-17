@@ -21,8 +21,17 @@ import {
 } from "@chakra-ui/react";
 import { useEffect, useMemo, useState } from "react";
 export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
-  // 敵の大画像（QA画像とは別）
-  const ENEMY_IMG = "./images/monster/slime.png";
+  // 敵の画像
+  const ENEMY_IMG = useMemo(() => {
+    const EnemyList = ["slime", "goblin", "dragon"];
+    const EMRandomNum = Math.floor(Math.random() * 3);
+    return `./images/monster/${EnemyList[EMRandomNum]}.png`;
+  }, []);
+  // 背景の画像
+  const BACKGROUND_IMG = useMemo(() => {
+    const BGRandomNum = Math.floor(Math.random() * 4);
+    return `./images/background/${BGRandomNum}.png`;
+  }, []);
 
   const [settings, setSettings] = useState<Settings>({
     durationSec: 60,
@@ -34,6 +43,9 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
     orderMode: "sequential",
   });
 
+  // 一問正解で敵 -10
+  const damagePerHit = useMemo(() => 10, []);
+
   const engine = useTypingEngine(
     {
       durationSec: settings.durationSec,
@@ -43,7 +55,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
       randomOrder: settings.orderMode === "random",
       battleMode: true, // ★バトルON
       playerMaxHp: 100,
-      enemyMaxHp: 100,
+      enemyMaxHp: damagePerHit * QA.length,
       damagePerHit: 10, // 一問正解で敵 -10
       damagePerMiss: 5, // ミス1打で自 -5
     },
@@ -105,11 +117,11 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
             </Button>
             {!engine.state.started || engine.state.finished ? (
               <Button colorPalette="blue" onClick={engine.start}>
-                始める
+                {settings.learningMode ? "始める" : "バトル"}
               </Button>
             ) : (
               <Button colorPalette="red" onClick={engine.stop}>
-                終わる
+                {settings.learningMode ? "終わる" : "にげる"}
               </Button>
             )}
           </HStack>
@@ -133,20 +145,33 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
               borderWidth="1px"
               overflow="hidden"
               bg="blackAlpha.50"
+              position="relative"
             >
               <Image
+                src={BACKGROUND_IMG}
+                alt="Background"
+                fit="cover"
+                w="100%"
+                h="100%"
+              />
+              <Image
+                position="absolute"
+                top="0"
+                left="0"
                 src={ENEMY_IMG}
                 alt="Enemy"
                 fit="contain"
                 w="100%"
-                h="calc(100vh - 351px)"
+                h="100%"
               />
             </Box>
             <Box w="450px">
               {/* 敵のセリフ（日本語） */}
               <Box rounded="lg" borderWidth="1px" p="3" bg="whiteAlpha.800">
                 <Text fontSize={{ base: "lg", md: "xl" }}>
-                  {engine.state.questionJa || "はじめるでせんとう開始！"}
+                  {engine.state.questionJa || settings.learningMode
+                    ? "はじめるで練習開始！"
+                    : "バトルでせんとう開始！"}
                 </Text>
               </Box>
 
@@ -191,10 +216,8 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
         </Box>
 
         {/* 学習モードの段階表示（任意） */}
-        {settings.learningMode &&
-          settings.learnThenRecall &&
-          engine.state.started &&
-          !engine.state.finished && (
+        {settings.learningMode ? (
+          settings.learnThenRecall ? (
             <HStack h="24px">
               <Badge
                 colorPalette={
@@ -207,11 +230,20 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
                   : "ふく習（Tabキーでヒント。1回目で音声・2回目でスペル）"}
               </Badge>
               <Text fontSize="sm" color="fg.muted">
-                学習で正かい →
-                ふく習へ。ふく習で正かいすると次の問題に進みます。
+                学習で正かい → ふく習へ ふく習で正かいすると次の問題に進みます。
               </Text>
             </HStack>
-          )}
+          ) : (
+            <HStack h="24px">
+              <Badge colorPalette="blue" variant="solid">
+                練習（スペル＋音声）
+              </Badge>
+              <Text fontSize="sm" color="fg.muted">
+                学習で正かい → 次の問題に進みます。
+              </Text>
+            </HStack>
+          )
+        ) : null}
 
         {/* 入力ビュー（英語で回答） */}
         <Box p="4" rounded="xl" borderWidth="1px" bg="bg.panel" h="109px">
