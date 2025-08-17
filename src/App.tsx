@@ -2,14 +2,15 @@ import { useSpeech } from "@/hooks/useSpeech";
 import QA_MONTH from "@/lib/texts/qa_month";
 import QA_NUMBER from "@/lib/texts/qa_number";
 import QA_TEST from "@/lib/texts/qa_test";
+import QA_WEEK from "@/lib/texts/qa_week";
 import { Button, Container, Heading, HStack, Stack } from "@chakra-ui/react";
 import { useState } from "react";
 import Typing from "./pages/typing";
 
 export default function App() {
-  const [page, setPage] = useState<"home" | "test" | "number" | "month">(
-    "home"
-  );
+  const [page, setPage] = useState<
+    "home" | "test" | "number" | "month" | "week"
+  >("home");
   const { warmup, waitUntilReady } = useSpeech();
   const go = (dest: typeof page) => async () => {
     // ここはユーザー操作（クリック）内
@@ -25,6 +26,8 @@ export default function App() {
       return <Typing QA={QA_NUMBER} title="1～10までの数字" />;
     case "month":
       return <Typing QA={QA_MONTH} title="月の名前" />;
+    case "week":
+      return <Typing QA={QA_WEEK} title="曜日の名前" />;
   }
   return (
     <Container p="6" maxW="container.md">
@@ -33,6 +36,7 @@ export default function App() {
         <HStack>
           <Button onClick={go("number")}>1～10までの数字</Button>
           <Button onClick={go("month")}>月の名前</Button>
+          <Button onClick={go("week")}>曜日の名前</Button>
         </HStack>
       </Stack>
     </Container>
