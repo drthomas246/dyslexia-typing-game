@@ -1,5 +1,6 @@
 import App from "@/App";
 import AnswerInputView from "@/components/AnswerInputView";
+import DamageMotion from "@/components/DamageMotion";
 import InputCapture from "@/components/InputCapture";
 import ResultsModalChakra from "@/components/ResultsDialogChakra";
 import SettingsDrawerChakra from "@/components/SettingsDrawerChakra";
@@ -19,7 +20,8 @@ import {
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
-import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
 export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
   // 敵の画像
   const ENEMY_IMG = useMemo(() => {
@@ -43,6 +45,10 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
     orderMode: "sequential",
   });
 
+  // クリックごとに増やすと、key が変わってアニメがやり直される
+  const [slashId, setSlashId] = useState(0);
+  // 追加: ダメージ用の状態
+  const [hurtId, setHurtId] = useState(0);
   // 一問正解で敵 -10
   const damagePerHit = useMemo(() => 10, []);
 
@@ -59,12 +65,15 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
       damagePerHit: 10, // 一問正解で敵 -10
       damagePerMiss: 5, // ミス1打で自 -5
     },
-    QA
+    QA,
+    setSlashId,
+    setHurtId
   );
 
   const settingsDisc = useDisclosure();
   const [resultOpen, setResultOpen] = useState(false);
   const [page, setPage] = useState<"home" | "typing">("typing");
+  const arenaRef = useRef<HTMLDivElement | null>(null);
 
   // 終了を検知して開く（Enterに依存しない）
   useEffect(() => {
@@ -138,6 +147,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
           <HStack gap="4" h="calc(100vh - 367px)" mb="16px">
             {/* 大きな敵スプライト（固定画像） */}
             <Box
+              ref={arenaRef}
               mx="auto"
               w="100%"
               h="calc(100vh - 367px)"
@@ -147,22 +157,67 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
               bg="blackAlpha.50"
               position="relative"
             >
-              <Image
-                src={BACKGROUND_IMG}
-                alt="Background"
-                fit="cover"
-                w="100%"
-                h="100%"
-              />
-              <Image
-                position="absolute"
-                top="0"
-                left="0"
-                src={ENEMY_IMG}
-                alt="Enemy"
-                fit="contain"
-                w="100%"
-                h="100%"
+              {/* ★ 敵エリア全体を横揺れさせるラッパー */}
+              <AnimatePresence>
+                {hurtId > 0 ? (
+                  <motion.div
+                    key={hurtId} // クリックごとに再生
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      position: "relative",
+                    }}
+                    initial={{ x: 0 }}
+                    animate={{ x: [0, -14, 14, -10, 10, -6, 6, 0] }}
+                    transition={{ duration: 0.45, ease: "easeInOut" }}
+                    exit={{ x: 0 }}
+                  >
+                    <Image
+                      src={BACKGROUND_IMG}
+                      alt="Background"
+                      fit="cover"
+                      w="100%"
+                      h="100%"
+                    />
+                    <Image
+                      position="absolute"
+                      top="0"
+                      left="0"
+                      src={ENEMY_IMG}
+                      alt="Enemy"
+                      fit="contain"
+                      w="100%"
+                      h="100%"
+                    />
+                  </motion.div>
+                ) : (
+                  // ★ 初期状態はアニメなしの静止コンテナを描画
+                  <Box w="100%" h="100%" position="relative">
+                    <Image
+                      src={BACKGROUND_IMG}
+                      alt="Background"
+                      fit="cover"
+                      w="100%"
+                      h="100%"
+                    />
+                    <Image
+                      position="absolute"
+                      top="0"
+                      left="0"
+                      src={ENEMY_IMG}
+                      alt="Enemy"
+                      fit="contain"
+                      w="100%"
+                      h="100%"
+                    />
+                  </Box>
+                )}
+              </AnimatePresence>
+              {/* 斬撃エフェクト（クリックで再生） */}
+              <DamageMotion
+                arenaRef={arenaRef!.current}
+                slashId={slashId}
+                hurtId={hurtId}
               />
             </Box>
             <Box w="450px">

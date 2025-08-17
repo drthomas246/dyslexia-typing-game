@@ -39,7 +39,12 @@ function shuffle<T>(arr: T[], seed: number) {
   return [...arr].sort(() => rng() - 0.5);
 }
 
-export function useTypingEngine(opts: EngineOptionsEx, QA: QAPair[]) {
+export function useTypingEngine(
+  opts: EngineOptionsEx,
+  QA: QAPair[],
+  setSlashId: React.Dispatch<React.SetStateAction<number>>,
+  setHurtId: React.Dispatch<React.SetStateAction<number>>
+) {
   const tickMs = Math.max(16, opts.tickMs ?? 100);
   const { speak } = useSpeech();
 
@@ -350,6 +355,7 @@ export function useTypingEngine(opts: EngineOptionsEx, QA: QAPair[]) {
               (s) =>
                 ({ ...s, hintStep: 1, problemUsedHint: true } as EngineStateEx)
             );
+            setHurtId((n) => n + 1);
             damagePlayerOnMiss();
           } else if (state.hintStep === 1) {
             setState(
@@ -361,6 +367,7 @@ export function useTypingEngine(opts: EngineOptionsEx, QA: QAPair[]) {
                   problemUsedHint: true,
                 } as EngineStateEx)
             );
+            setHurtId((n) => n + 1);
             damagePlayerOnMiss();
           }
         }
@@ -406,6 +413,7 @@ export function useTypingEngine(opts: EngineOptionsEx, QA: QAPair[]) {
 
       // ★ ダメージ適用
       if (!res.ok) {
+        setHurtId((n) => n + 1);
         damagePlayerOnMiss();
       }
 
@@ -434,6 +442,7 @@ export function useTypingEngine(opts: EngineOptionsEx, QA: QAPair[]) {
           return;
         }
         // ★文クリア時の敵ダメージをここで適用
+        setSlashId((n) => n + 1);
         damageEnemyOnSentence();
         setTimeout(next, 0);
       }
@@ -446,6 +455,8 @@ export function useTypingEngine(opts: EngineOptionsEx, QA: QAPair[]) {
       opts.learnThenRecall,
       damagePlayerOnMiss,
       damageEnemyOnSentence,
+      setSlashId,
+      setHurtId,
     ]
   );
 
