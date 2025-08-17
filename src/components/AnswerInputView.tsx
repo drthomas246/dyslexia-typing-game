@@ -2,10 +2,13 @@ import { Box } from "@chakra-ui/react";
 
 /**
  * typed と correctMap を元に色分けして表示
- * - 直近（末尾）の正解: 青
- * - 直近（末尾）の不正解: 赤
- * - それ以前の正解: 黒
- * - それ以前の不正解: 赤
+ * - ヒントOFF:
+ *   - 直近（末尾）の正解: 青 / 不正解: 赤
+ *   - それ以前: 正解=黒 / 不正解=赤
+ * - ヒントON:
+ *   - 入力済みの直近: 正解=青 / 不正解=赤
+ *   - 入力済みのそれ以前: 正解=黒 / 不正解=赤（★変更点）
+ *   - 未入力: 答えを灰色ゴースト表示
  */
 export default function AnswerInputView({
   typed,
@@ -30,7 +33,7 @@ export default function AnswerInputView({
     >
       {displayChars.map((ch, i) => {
         if (!showHint) {
-          // 旧ルール（ヒントOFF）
+          // ヒントOFF
           if (typed.length === 0) return null;
           if (i >= typed.length) return null; // 未入力は表示しない
           if (i === last) {
@@ -49,11 +52,11 @@ export default function AnswerInputView({
           );
         }
 
-        // ヒントONの配色
+        // ヒントON
         if (i < typed.length) {
           // 入力済み部分
           if (i === last) {
-            // 直近入力のみ 青/赤
+            // 直近は青/赤
             const color = correctMap[i] ? "blue.600" : "red.500";
             return (
               <Box as="span" key={i} color={color} whiteSpace="pre">
@@ -61,9 +64,10 @@ export default function AnswerInputView({
               </Box>
             );
           }
-          // それ以前は黒（正誤に関わらず）
+          // ★変更点：それ以前は「正解=黒 / 不正解=赤」
+          const color = correctMap[i] ? "black" : "red.500";
           return (
-            <Box as="span" key={i} color="black" whiteSpace="pre">
+            <Box as="span" key={i} color={color} whiteSpace="pre">
               {typed[i]}
             </Box>
           );
