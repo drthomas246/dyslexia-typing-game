@@ -47,8 +47,14 @@ export function useTypingEngine(opts: EngineOptionsEx, QA: QAPair[]) {
   const battleMode = opts.battleMode ?? true;
   const playerMaxHp = Math.max(1, opts.playerMaxHp ?? 100);
   const enemyMaxHp = Math.max(1, opts.enemyMaxHp ?? 100);
-  const damagePerHit = Math.max(1, opts.damagePerHit ?? 2);
   const damagePerMiss = Math.max(1, opts.damagePerMiss ?? 5);
+
+  // 既存の damagePerHit を「文クリア時の敵ダメージ」として使う
+  // もし専用を用意したい場合は opts.damagePerSentence を見てください（なければ既存値/10にフォールバック）
+  const damagePerSentence = Math.max(
+    1,
+    opts.damagePerSentence ?? opts.damagePerHit ?? 10
+  );
 
   const [order, setOrder] = useState<number[]>([]);
   const [state, setState] = useState<EngineStateEx>(() => ({
@@ -287,32 +293,38 @@ export function useTypingEngine(opts: EngineOptionsEx, QA: QAPair[]) {
     [opts.learningMode]
   );
 
-  // ★ HP 適用（正打=敵にダメージ / ミス=自分にダメージ）
-  const applyBattleDamage = useCallback(
-    (ok: boolean) => {
-      if (!battleMode) return;
-      setState((s) => {
-        if (s.finished) return s as EngineStateEx;
-        let playerHp = s.playerHp;
-        let enemyHp = s.enemyHp;
-        if (ok) {
-          enemyHp = Math.max(0, enemyHp - damagePerHit);
-        } else {
-          playerHp = Math.max(0, playerHp - damagePerMiss);
-        }
-        const finished = playerHp <= 0 || enemyHp <= 0;
-        const victory = finished ? enemyHp <= 0 && playerHp > 0 : s.victory;
-        return {
-          ...s,
-          playerHp,
-          enemyHp,
-          finished: finished ? true : s.finished,
-          victory,
-        } as EngineStateEx;
-      });
-    },
-    [battleMode, damagePerHit, damagePerMiss]
-  );
+  // ★既存 applyBattleDamage を削除/未使用化し、代わりに2関数を定義
+  const damagePlayerOnMiss = useCallback(() => {
+    if (!battleMode) return;
+    // 追加：学習モード中はHPを減らさない
+    if (opts.learningMode) return;
+    setState((s) => {
+      if (s.finished) return s;
+      const playerHp = Math.max(0, s.playerHp - damagePerMiss);
+      const finished = playerHp <= 0 || s.enemyHp <= 0;
+      return {
+        ...s,
+        playerHp,
+        finished: finished ? true : s.finished,
+        victory: finished ? (s.enemyHp > 0 ? false : s.victory) : s.victory,
+      };
+    });
+  }, [battleMode, damagePerMiss, opts.learningMode]);
+
+  const damageEnemyOnSentence = useCallback(() => {
+    if (!battleMode) return;
+    setState((s) => {
+      if (s.finished) return s;
+      const enemyHp = Math.max(0, s.enemyHp - damagePerSentence);
+      const finished = s.playerHp <= 0 || enemyHp <= 0;
+      return {
+        ...s,
+        enemyHp,
+        finished: finished ? true : s.finished,
+        victory: finished ? enemyHp <= 0 && s.playerHp > 0 : s.victory,
+      };
+    });
+  }, [battleMode, damagePerSentence]);
 
   const onKey = useCallback(
     (key: string) => {
@@ -338,6 +350,7 @@ export function useTypingEngine(opts: EngineOptionsEx, QA: QAPair[]) {
               (s) =>
                 ({ ...s, hintStep: 1, problemUsedHint: true } as EngineStateEx)
             );
+            damagePlayerOnMiss();
           } else if (state.hintStep === 1) {
             setState(
               (s) =>
@@ -348,6 +361,7 @@ export function useTypingEngine(opts: EngineOptionsEx, QA: QAPair[]) {
                   problemUsedHint: true,
                 } as EngineStateEx)
             );
+            damagePlayerOnMiss();
           }
         }
         return;
@@ -391,7 +405,9 @@ export function useTypingEngine(opts: EngineOptionsEx, QA: QAPair[]) {
       );
 
       // ★ ダメージ適用
-      applyBattleDamage(res.ok);
+      if (!res.ok) {
+        damagePlayerOnMiss();
+      }
 
       // 全字正解なら自動で次へ（学習2段階あり）
       const willCompleteLen = cursor + 1 === state.answerEn.length;
@@ -417,6 +433,8 @@ export function useTypingEngine(opts: EngineOptionsEx, QA: QAPair[]) {
           );
           return;
         }
+        // ★文クリア時の敵ダメージをここで適用
+        damageEnemyOnSentence();
         setTimeout(next, 0);
       }
     },
@@ -425,8 +443,9 @@ export function useTypingEngine(opts: EngineOptionsEx, QA: QAPair[]) {
       next,
       opts.learningMode,
       speak,
-      applyBattleDamage,
       opts.learnThenRecall,
+      damagePlayerOnMiss,
+      damageEnemyOnSentence,
     ]
   );
 

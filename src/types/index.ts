@@ -95,6 +95,7 @@ export type EngineOptions = {
   learnThenRecall?: boolean;
   /** ★追加：true=ランダム / false=並び順（既定 false） */
   randomOrder?: boolean;
+  damagePerSentence?: number;
 };
 
 export type EngineState = {

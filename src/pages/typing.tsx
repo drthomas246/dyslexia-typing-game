@@ -44,7 +44,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
       battleMode: true, // ★バトルON
       playerMaxHp: 100,
       enemyMaxHp: 100,
-      damagePerHit: 2, // 正解1打で敵 -2
+      damagePerHit: 10, // 一問正解で敵 -10
       damagePerMiss: 5, // ミス1打で自 -5
     },
     QA
@@ -190,6 +190,29 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
           </HStack>
         </Box>
 
+        {/* 学習モードの段階表示（任意） */}
+        {settings.learningMode &&
+          settings.learnThenRecall &&
+          engine.state.started &&
+          !engine.state.finished && (
+            <HStack h="24px">
+              <Badge
+                colorPalette={
+                  engine.state.learningPhase === "study" ? "blue" : "purple"
+                }
+                variant="solid"
+              >
+                {engine.state.learningPhase === "study"
+                  ? "練習（スペル＋音声）"
+                  : "ふく習（Tabキーでヒント。1回目で音声・2回目でスペル）"}
+              </Badge>
+              <Text fontSize="sm" color="fg.muted">
+                学習で正かい →
+                ふく習へ。ふく習で正かいすると次の問題に進みます。
+              </Text>
+            </HStack>
+          )}
+
         {/* 入力ビュー（英語で回答） */}
         <Box p="4" rounded="xl" borderWidth="1px" bg="bg.panel" h="109px">
           <AnswerInputView
@@ -205,23 +228,25 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
         </Box>
 
         {/* 自分HPバー */}
-        <HStack gap="3" align="center">
-          <Badge colorPalette="blue" variant="solid">
-            あなたのHP
-          </Badge>
-          <Box
-            flex="1"
-            h="18px"
-            rounded="full"
-            bg="blackAlpha.200"
-            overflow="hidden"
-          >
-            <Box h="full" w={`${playerHpPct}%`} bg="blue.500" />
-          </Box>
-          <Text w="96px" textAlign="right">
-            {engine.state.playerHp}/{engine.state.playerMaxHp}
-          </Text>
-        </HStack>
+        {!settings.learningMode && (
+          <HStack gap="3" align="center" h="24px">
+            <Badge colorPalette="blue" variant="solid">
+              あなたのHP
+            </Badge>
+            <Box
+              flex="1"
+              h="18px"
+              rounded="full"
+              bg="blackAlpha.200"
+              overflow="hidden"
+            >
+              <Box h="full" w={`${playerHpPct}%`} bg="blue.500" />
+            </Box>
+            <Text w="96px" textAlign="right">
+              {engine.state.playerHp}/{engine.state.playerMaxHp}
+            </Text>
+          </HStack>
+        )}
 
         {/* 入力キャプチャ（ダイアログ表示中は無効） */}
         <InputCapture
