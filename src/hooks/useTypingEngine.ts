@@ -4,6 +4,28 @@ import { judgeChar } from "@/lib/judge";
 import type { EngineOptions, EngineState, QAPair } from "@/types/index";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+/** 既存 EngineOptions/State を壊さず拡張するためのローカル型 */
+type EngineOptionsEx = EngineOptions & {
+  /** ドラクエ風バトル（HP制）を有効化。既定: true */
+  battleMode?: boolean;
+  /** プレイヤー/敵の最大HP（既定: 100） */
+  playerMaxHp?: number;
+  enemyMaxHp?: number;
+  /** 正打/ミス1回あたりのダメージ（既定: 正打2 / ミス5） */
+  damagePerHit?: number;
+  damagePerMiss?: number;
+};
+
+type EngineStateEx = EngineState & {
+  /** HP 系と勝敗（バトル用） */
+  playerHp: number;
+  enemyHp: number;
+  playerMaxHp: number;
+  enemyMaxHp: number;
+  /** true=勝利 / false=敗北 / undefined=未決 */
+  victory?: boolean;
+};
+
 function mulberry32(a: number) {
   return function () {
     let t = (a += 0x6d2b79f5);
@@ -17,14 +39,33 @@ function shuffle<T>(arr: T[], seed: number) {
   return [...arr].sort(() => rng() - 0.5);
 }
 
-export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
+export function useTypingEngine(
+  opts: EngineOptionsEx,
+  QA: QAPair[],
+  setSlashId: React.Dispatch<React.SetStateAction<number>>,
+  setHurtId: React.Dispatch<React.SetStateAction<number>>
+) {
   const tickMs = Math.max(16, opts.tickMs ?? 100);
   const { speak } = useSpeech();
 
+  // ★ バトル系オプション（デフォルト値をここで確定）
+  const battleMode = opts.battleMode ?? true;
+  const playerMaxHp = Math.max(1, opts.playerMaxHp ?? 100);
+  const enemyMaxHp = Math.max(1, opts.enemyMaxHp ?? 100);
+  const damagePerMiss = Math.max(1, opts.damagePerMiss ?? 5);
+
+  // 既存の damagePerHit を「文クリア時の敵ダメージ」として使う
+  // もし専用を用意したい場合は opts.damagePerSentence を見てください（なければ既存値/10にフォールバック）
+  const damagePerSentence = Math.max(
+    1,
+    opts.damagePerSentence ?? opts.damagePerHit ?? 10
+  );
+
   const [order, setOrder] = useState<number[]>([]);
-  const [state, setState] = useState<EngineState>(() => ({
+  const [state, setState] = useState<EngineStateEx>(() => ({
     started: false,
     finished: false,
+    // EngineState 由来
     questionJa: "",
     answerEn: "",
     typed: "",
@@ -38,11 +79,19 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
     problemUsedHint: !!opts.learningMode,
     hintStep: 0,
     learningPhase: "study",
+    // 追加分
+    playerHp: playerMaxHp,
+    enemyHp: enemyMaxHp,
+    playerMaxHp,
+    enemyMaxHp,
+    victory: undefined,
   }));
   const [nowMs, setNowMs] = useState<number>(Date.now());
   const startedRef = useRef(false);
 
+  // ★ バトル中はタイマー固定（使わない）。それ以外は従来通り。
   const timeLeftSec = useMemo(() => {
+    if (battleMode) return opts.durationSec;
     if (opts.learningMode) return opts.durationSec;
     if (!state.started || !state.startAt) return opts.durationSec;
     const elapsedSec = Math.floor((nowMs - state.startAt) / 1000);
@@ -53,6 +102,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
     state.startAt,
     opts.durationSec,
     opts.learningMode,
+    battleMode,
   ]);
 
   const initOrder = useCallback(() => {
@@ -95,6 +145,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
       started: true,
       finished: false,
       startAt: now,
+      // 以降リセット
       questionJa: "",
       answerEn: "",
       questionImg: undefined,
@@ -109,16 +160,23 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
       problemUsedHint: learning,
       hintStep: 0,
       learningPhase: "study",
-    });
-  }, [initOrder, opts.learningMode]);
+      // HP 初期化
+      playerHp: playerMaxHp,
+      enemyHp: enemyMaxHp,
+      playerMaxHp,
+      enemyMaxHp,
+      victory: undefined,
+    } as EngineStateEx);
+  }, [initOrder, opts.learningMode, playerMaxHp, enemyMaxHp]);
 
+  // ★ 通常モード時のみタイマー更新（バトル/学習は停止）
   useEffect(() => {
     if (!state.started || state.finished) return;
-    if (opts.learningMode) return;
+    if (battleMode || opts.learningMode) return;
     setNowMs(Date.now());
     const id = setInterval(() => setNowMs(Date.now()), tickMs);
     return () => clearInterval(id);
-  }, [state.started, state.finished, tickMs, opts.learningMode]);
+  }, [state.started, state.finished, tickMs, opts.learningMode, battleMode]);
 
   useEffect(() => {
     if (
@@ -131,6 +189,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
     }
   }, [state.started, order, state.answerEn, loadPair]);
 
+  // 学習モード: study 段のみ出題確定時に読み上げ
   const spokenRef = useRef<string>("");
   useEffect(() => {
     if (!state.started || state.finished) return;
@@ -152,12 +211,24 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
     state.learningPhase,
   ]);
 
+  // タイムアップ（バトル/学習では無効）
   useEffect(() => {
     if (!state.started || state.finished) return;
-    if (opts.learningMode) return;
-    if (timeLeftSec <= 0) setState((s) => ({ ...s, finished: true }));
-  }, [timeLeftSec, state.started, state.finished, opts.learningMode]);
+    if (battleMode || opts.learningMode) return;
+    if (timeLeftSec <= 0)
+      setState(
+        (s) =>
+          ({ ...s, finished: true, victory: s.enemyHp <= 0 } as EngineStateEx)
+      );
+  }, [
+    timeLeftSec,
+    state.started,
+    state.finished,
+    opts.learningMode,
+    battleMode,
+  ]);
 
+  // 学習モードの途中切替を同期
   useEffect(() => {
     if (!state.started || state.finished) return;
     const learning = !!opts.learningMode;
@@ -174,7 +245,12 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
       const newCombo = disqualified ? 0 : s.combo + 1;
       const hasNext = s.index + 1 < order.length;
       if (!hasNext) {
-        return { ...s, combo: newCombo, finished: true };
+        return {
+          ...s,
+          combo: newCombo,
+          finished: true,
+          victory: s.enemyHp <= 0,
+        } as EngineStateEx;
       }
       const nextIndex = s.index + 1;
       const pairIndex = order[nextIndex] ?? 0;
@@ -194,118 +270,194 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
         problemUsedHint: learning,
         hintStep: 0,
         learningPhase: "study",
-      };
+      } as EngineStateEx;
     });
   }, [order, opts.learningMode, QA]);
 
   const stop = useCallback(() => {
-    setState((s) => ({ ...s, finished: true }));
+    setState(
+      (s) =>
+        ({ ...s, finished: true, victory: s.enemyHp <= 0 } as EngineStateEx)
+    );
   }, []);
 
   const setLearningPhase = useCallback(
     (phase: "study" | "recall") => {
-      setState((s) => ({
-        ...s,
-        learningPhase: phase,
-        showHint: phase === "study" || !!opts.learningMode,
-        typed: "",
-        correctMap: [],
-        hintStep: 0,
-      }));
+      setState(
+        (s) =>
+          ({
+            ...s,
+            learningPhase: phase,
+            showHint: phase === "study" || !!opts.learningMode,
+            typed: "",
+            correctMap: [],
+            hintStep: 0,
+          } as EngineStateEx)
+      );
     },
     [opts.learningMode]
   );
+
+  // ★既存 applyBattleDamage を削除/未使用化し、代わりに2関数を定義
+  const damagePlayerOnMiss = useCallback(() => {
+    if (!battleMode) return;
+    // 追加：学習モード中はHPを減らさない
+    if (opts.learningMode) return;
+    setState((s) => {
+      if (s.finished) return s;
+      const playerHp = Math.max(0, s.playerHp - damagePerMiss);
+      const finished = playerHp <= 0 || s.enemyHp <= 0;
+      return {
+        ...s,
+        playerHp,
+        finished: finished ? true : s.finished,
+        victory: finished ? (s.enemyHp > 0 ? false : s.victory) : s.victory,
+      };
+    });
+  }, [battleMode, damagePerMiss, opts.learningMode]);
+
+  const damageEnemyOnSentence = useCallback(() => {
+    if (!battleMode) return;
+    setState((s) => {
+      if (s.finished) return s;
+      const enemyHp = Math.max(0, s.enemyHp - damagePerSentence);
+      const finished = s.playerHp <= 0 || enemyHp <= 0;
+      return {
+        ...s,
+        enemyHp,
+        finished: finished ? true : s.finished,
+        victory: finished ? enemyHp <= 0 && s.playerHp > 0 : s.victory,
+      };
+    });
+  }, [battleMode, damagePerSentence]);
 
   const onKey = useCallback(
     (key: string) => {
       if (!state.started || state.finished || state.answerEn.length === 0)
         return;
 
+      // Space: 次の問題
       if (key === " ") {
         next();
         return;
       }
 
+      // Tab: 通常 or（学習モードでも recall 中）は段階ヒント
       if (key === "\t") {
         const inRecall =
           !!opts.learningMode &&
           !!opts.learnThenRecall &&
           state.learningPhase === "recall";
-
-        // 通常モード or （学習モードでも recall 中）は Tab 有効
         if (!opts.learningMode || inRecall) {
           if (state.hintStep === 0) {
-            speak(state.answerEn, { lang: "en-US" }); // 1回目=音声
-            setState((s) => ({
-              ...s,
-              hintStep: 1,
-              problemUsedHint: true, // 失格扱い（既に学習モード中は true のはずだが明示）
-            }));
+            speak(state.answerEn, { lang: "en-US" });
+            setState(
+              (s) =>
+                ({ ...s, hintStep: 1, problemUsedHint: true } as EngineStateEx)
+            );
+            setHurtId((n) => n + 1);
+            damagePlayerOnMiss();
           } else if (state.hintStep === 1) {
-            setState((s) => ({
-              ...s,
-              hintStep: 2,
-              showHint: true, // 2回目=英語表示
-              problemUsedHint: true,
-            }));
+            setState(
+              (s) =>
+                ({
+                  ...s,
+                  hintStep: 2,
+                  showHint: true,
+                  problemUsedHint: true,
+                } as EngineStateEx)
+            );
+            setHurtId((n) => n + 1);
+            damagePlayerOnMiss();
           }
         }
         return;
       }
 
+      // Backspace
       if (key === "\b") {
         if (state.typed.length > 0) {
-          setState((s) => ({
-            ...s,
-            typed: s.typed.slice(0, -1),
-            correctMap: s.correctMap.slice(0, -1),
-          }));
+          setState(
+            (s) =>
+              ({
+                ...s,
+                typed: s.typed.slice(0, -1),
+                correctMap: s.correctMap.slice(0, -1),
+              } as EngineStateEx)
+          );
         }
         return;
       }
 
+      // Enter: Stop は App 側で
       if (key === "\n") return;
 
-      if (state.typed.length >= state.answerEn.length) {
-        return;
-      }
+      // 既に正解長に達していたら無視
+      if (state.typed.length >= state.answerEn.length) return;
 
+      // 判定
       const cursor = state.typed.length;
       const res = judgeChar(state.answerEn, cursor, key);
 
-      setState((s) => ({
-        ...s,
-        typed: s.typed + key,
-        correctMap: [...s.correctMap, res.ok],
-        hits: s.hits + (res.ok ? 1 : 0),
-        errors: s.errors + (res.ok ? 0 : 1),
-        problemHasMistake: s.problemHasMistake || !res.ok,
-      }));
+      setState(
+        (s) =>
+          ({
+            ...s,
+            typed: s.typed + key,
+            correctMap: [...s.correctMap, res.ok],
+            hits: s.hits + (res.ok ? 1 : 0),
+            errors: s.errors + (res.ok ? 0 : 1),
+            problemHasMistake: s.problemHasMistake || !res.ok,
+          } as EngineStateEx)
+      );
 
+      // ★ ダメージ適用
+      if (!res.ok) {
+        setHurtId((n) => n + 1);
+        damagePlayerOnMiss();
+      }
+
+      // 全字正解なら自動で次へ（学習2段階あり）
       const willCompleteLen = cursor + 1 === state.answerEn.length;
       const allPrevCorrect = state.correctMap.every(Boolean);
       const completesAllCorrect = willCompleteLen && res.ok && allPrevCorrect;
       if (completesAllCorrect) {
-        // 学習モード＋二段階有効＋study段 → recall段へ
+        // 学習モード＋learnThenRecall＋study → recall 遷移
         if (
           opts.learningMode &&
           opts.learnThenRecall &&
           state.learningPhase === "study"
         ) {
-          setState((s) => ({
-            ...s,
-            learningPhase: "recall",
-            showHint: false,
-            typed: "",
-            correctMap: [],
-            hintStep: 0,
-          }));
+          setState(
+            (s) =>
+              ({
+                ...s,
+                learningPhase: "recall",
+                showHint: false,
+                typed: "",
+                correctMap: [],
+                hintStep: 0,
+              } as EngineStateEx)
+          );
           return;
         }
+        // ★文クリア時の敵ダメージをここで適用
+        setSlashId((n) => n + 1);
+        damageEnemyOnSentence();
         setTimeout(next, 0);
       }
     },
-    [state, next, opts.learningMode, opts.learnThenRecall, speak]
+    [
+      state,
+      next,
+      opts.learningMode,
+      speak,
+      opts.learnThenRecall,
+      damagePlayerOnMiss,
+      damageEnemyOnSentence,
+      setSlashId,
+      setHurtId,
+    ]
   );
 
   const wpm = useMemo(() => {
