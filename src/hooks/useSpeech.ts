@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export function useSpeech() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [isReady, setIsReady] = useState(false); // ★追加: voices 準備状態
+  const [isReady, setIsReady] = useState(false); // voices 準備状態
   const readyRef = useRef(false);
 
   // voices 準備待ちの解放キュー
@@ -25,8 +25,8 @@ export function useSpeech() {
       if (v && v.length) {
         setVoices(v);
         readyRef.current = true;
-        setIsReady(true); // ★追加
-        // ★ voices を待っている呼び出しを解放
+        setIsReady(true);
+        // voices を待っている呼び出しを解放
         if (readyWaiters.current.length) {
           readyWaiters.current.forEach((resolve) => resolve());
           readyWaiters.current = [];
@@ -52,7 +52,7 @@ export function useSpeech() {
     }
   }, []);
 
-  // ★追加: voices 準備完了を待つ（最長 ~1s で解放）
+  // voices 準備完了を待つ（最長 ~1s で解放）
   const waitUntilReady = useCallback((): Promise<void> => {
     if (readyRef.current) return Promise.resolve();
     return new Promise<void>((resolve) => {
@@ -62,7 +62,7 @@ export function useSpeech() {
     });
   }, []);
 
-  // ★追加: TTS ウォームアップ（無音の極短発話でエンジンを起動）
+  // TTS ウォームアップ（無音の極短発話でエンジンを起動）
   const warmup = useCallback(async () => {
     try {
       await waitUntilReady();
@@ -153,6 +153,6 @@ export function useSpeech() {
     [voices, stop]
   );
 
-  // ★拡張: isReady, waitUntilReady, warmup を公開
+  // isReady, waitUntilReady, warmup を公開
   return { speak, stop, voices, isReady, waitUntilReady, warmup };
 }

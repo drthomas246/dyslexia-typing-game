@@ -62,6 +62,7 @@ This software is provided for personal, non-commercial use only.
 Redistribution or modification without permission is prohibited.
 
 The images in this app here are courtesy of [いらすとや](https://www.irasutoya.com/).
+The monster and background images used here were created using [Gemini](https://gemini.google.com/).
 
 ---
 

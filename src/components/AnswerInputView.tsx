@@ -7,7 +7,7 @@ import { Box } from "@chakra-ui/react";
  *   - それ以前: 正解=黒 / 不正解=赤
  * - ヒントON:
  *   - 入力済みの直近: 正解=青 / 不正解=赤
- *   - 入力済みのそれ以前: 正解=黒 / 不正解=赤（★変更点）
+ *   - 入力済みのそれ以前: 正解=黒 / 不正解=赤
  *   - 未入力: 答えを灰色ゴースト表示
  */
 export default function AnswerInputView({
@@ -64,7 +64,7 @@ export default function AnswerInputView({
               </Box>
             );
           }
-          // ★変更点：それ以前は「正解=黒 / 不正解=赤」
+          // それ以前は「正解=黒 / 不正解=赤」
           const color = correctMap[i] ? "black" : "red.500";
           return (
             <Box as="span" key={i} color={color} whiteSpace="pre">

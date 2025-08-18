@@ -14,7 +14,7 @@ export default function InputCapture({
     if (!enabled) return;
     const handler = (e: KeyboardEvent) => {
       if (!enabled) return;
-      // ★ Tab: ヒント表示トグル（ブラウザのフォーカス移動を阻止）
+      // Tab: ヒント表示トグル（ブラウザのフォーカス移動を阻止）
       if (handleTab && e.key === "Tab") {
         onKey("\t", e);
         e.preventDefault();
