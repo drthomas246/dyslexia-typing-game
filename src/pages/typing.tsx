@@ -47,7 +47,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
 
   // クリックごとに増やすと、key が変わってアニメがやり直される
   const [slashId, setSlashId] = useState(0);
-  // 追加: ダメージ用の状態
+  // ダメージ用の状態
   const [hurtId, setHurtId] = useState(0);
   // 一問正解で敵 -10
   const damagePerHit = useMemo(() => 10, []);
@@ -59,7 +59,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
       // 二段階学習フローをエンジンへ
       learnThenRecall: settings.learnThenRecall,
       randomOrder: settings.orderMode === "random",
-      battleMode: true, // ★バトルON
+      battleMode: true, // バトルON
       playerMaxHp: 100,
       enemyMaxHp: damagePerHit * QA.length,
       damagePerHit: 10, // 一問正解で敵 -10
@@ -157,7 +157,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
               bg="blackAlpha.50"
               position="relative"
             >
-              {/* ★ 敵エリア全体を横揺れさせるラッパー */}
+              {/* 敵エリア全体を横揺れさせるラッパー */}
               <AnimatePresence>
                 {hurtId > 0 ? (
                   <motion.div
@@ -191,7 +191,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
                     />
                   </motion.div>
                 ) : (
-                  // ★ 初期状態はアニメなしの静止コンテナを描画
+                  // 初期状態はアニメなしの静止コンテナを描画
                   <Box w="100%" h="100%" position="relative">
                     <Image
                       src={BACKGROUND_IMG}
@@ -224,13 +224,15 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
               {/* 敵のセリフ（日本語） */}
               <Box rounded="lg" borderWidth="1px" p="3" bg="whiteAlpha.800">
                 <Text fontSize={{ base: "lg", md: "xl" }}>
-                  {engine.state.questionJa || settings.learningMode
-                    ? "はじめるで練習開始！"
-                    : "バトルでせんとう開始！"}
+                  {engine.state.questionJa
+                    ? engine.state.questionJa
+                    : settings.learningMode
+                    ? "問題がここに出るよ"
+                    : "バトル開始"}
                 </Text>
               </Box>
 
-              {/* ★ 追加：QAの画像（ヒント用）。セリフの下に表示 */}
+              {/* QAの画像（ヒント用）。セリフの下に表示 */}
               <Box mt="16px">
                 <AspectRatio ratio={1 / 1} w="200px" mx="auto">
                   {engine.state.questionImg ? (

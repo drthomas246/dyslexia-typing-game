@@ -59,7 +59,7 @@ export type Settings = {
   sound: boolean; // 効果音
   language: string; // "en" | "ja" | ...
   learningMode: boolean; // 学習モード（常時ヒント・タイマー停止）
-  learnThenRecall: boolean; // ★追加：学習→リコールの2段階を有効化
+  learnThenRecall: boolean; // 学習→リコールの2段階を有効化
   orderMode: "random" | "sequential";
 };
 
@@ -68,7 +68,7 @@ export type SettingsDrawerProps = {
   onClose: () => void;
   settings: Settings;
   onChange: (s: Settings) => void;
-  engine?: EngineLike; // ★追加：現在フェーズ表示と手動切替に使用（任意）
+  engine?: EngineLike; // 現在フェーズ表示と手動切替に使用（任意）
 };
 
 export type SpeakOpts = {
@@ -93,7 +93,7 @@ export type EngineOptions = {
   learningMode?: boolean;
   /** 学習→リコールの二段階を有効化 */
   learnThenRecall?: boolean;
-  /** ★追加：true=ランダム / false=並び順（既定 false） */
+  /** true=ランダム / false=並び順（既定 false） */
   randomOrder?: boolean;
   damagePerSentence?: number;
 };

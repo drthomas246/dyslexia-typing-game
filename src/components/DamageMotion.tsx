@@ -72,7 +72,7 @@ export default function DamageMotion({
           </Box>
         )}
       </AnimatePresence>
-      {/* ★ ダメージの赤フラッシュ */}
+      {/* ダメージの赤フラッシュ */}
       <AnimatePresence>
         {hurtId > 0 && (
           <motion.div

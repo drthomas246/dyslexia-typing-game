@@ -4,7 +4,7 @@ import { judgeChar } from "@/lib/judge";
 import type { EngineOptions, EngineState, QAPair } from "@/types/index";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-/** 既存 EngineOptions/State を壊さず拡張するためのローカル型 */
+/** EngineOptions/State を壊さず拡張するためのローカル型 */
 type EngineOptionsEx = EngineOptions & {
   /** ドラクエ風バトル（HP制）を有効化。既定: true */
   battleMode?: boolean;
@@ -48,13 +48,13 @@ export function useTypingEngine(
   const tickMs = Math.max(16, opts.tickMs ?? 100);
   const { speak } = useSpeech();
 
-  // ★ バトル系オプション（デフォルト値をここで確定）
+  // バトル系オプション（デフォルト値をここで確定）
   const battleMode = opts.battleMode ?? true;
   const playerMaxHp = Math.max(1, opts.playerMaxHp ?? 100);
   const enemyMaxHp = Math.max(1, opts.enemyMaxHp ?? 100);
   const damagePerMiss = Math.max(1, opts.damagePerMiss ?? 5);
 
-  // 既存の damagePerHit を「文クリア時の敵ダメージ」として使う
+  // damagePerHit を「文クリア時の敵ダメージ」として使う
   // もし専用を用意したい場合は opts.damagePerSentence を見てください（なければ既存値/10にフォールバック）
   const damagePerSentence = Math.max(
     1,
@@ -79,7 +79,6 @@ export function useTypingEngine(
     problemUsedHint: !!opts.learningMode,
     hintStep: 0,
     learningPhase: "study",
-    // 追加分
     playerHp: playerMaxHp,
     enemyHp: enemyMaxHp,
     playerMaxHp,
@@ -89,7 +88,7 @@ export function useTypingEngine(
   const [nowMs, setNowMs] = useState<number>(Date.now());
   const startedRef = useRef(false);
 
-  // ★ バトル中はタイマー固定（使わない）。それ以外は従来通り。
+  // バトル中はタイマー固定（使わない）。それ以外は従来通り。
   const timeLeftSec = useMemo(() => {
     if (battleMode) return opts.durationSec;
     if (opts.learningMode) return opts.durationSec;
@@ -169,7 +168,7 @@ export function useTypingEngine(
     } as EngineStateEx);
   }, [initOrder, opts.learningMode, playerMaxHp, enemyMaxHp]);
 
-  // ★ 通常モード時のみタイマー更新（バトル/学習は停止）
+  // 通常モード時のみタイマー更新（バトル/学習は停止）
   useEffect(() => {
     if (!state.started || state.finished) return;
     if (battleMode || opts.learningMode) return;
@@ -298,10 +297,10 @@ export function useTypingEngine(
     [opts.learningMode]
   );
 
-  // ★既存 applyBattleDamage を削除/未使用化し、代わりに2関数を定義
+  // applyBattleDamage を削除/未使用化し、代わりに2関数を定義
   const damagePlayerOnMiss = useCallback(() => {
     if (!battleMode) return;
-    // 追加：学習モード中はHPを減らさない
+    // 学習モード中はHPを減らさない
     if (opts.learningMode) return;
     setState((s) => {
       if (s.finished) return s;
@@ -411,7 +410,7 @@ export function useTypingEngine(
           } as EngineStateEx)
       );
 
-      // ★ ダメージ適用
+      // ダメージ適用
       if (!res.ok) {
         setHurtId((n) => n + 1);
         damagePlayerOnMiss();
@@ -441,7 +440,7 @@ export function useTypingEngine(
           );
           return;
         }
-        // ★文クリア時の敵ダメージをここで適用
+        // 文クリア時の敵ダメージをここで適用
         setSlashId((n) => n + 1);
         damageEnemyOnSentence();
         setTimeout(next, 0);
