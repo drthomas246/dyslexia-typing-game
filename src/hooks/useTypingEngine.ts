@@ -24,6 +24,7 @@ type EngineStateEx = EngineState & {
   enemyMaxHp: number;
   /** true=勝利 / false=敗北 / undefined=未決 */
   victory?: boolean;
+  playCount: number;
 };
 
 function mulberry32(a: number) {
@@ -43,7 +44,9 @@ export function useTypingEngine(
   opts: EngineOptionsEx,
   QA: QAPair[],
   setSlashId: React.Dispatch<React.SetStateAction<number>>,
-  setHurtId: React.Dispatch<React.SetStateAction<number>>
+  setHurtId: React.Dispatch<React.SetStateAction<number>>,
+  setVanishId: React.Dispatch<React.SetStateAction<number>>,
+  setVanished: React.Dispatch<React.SetStateAction<boolean>>
 ) {
   const tickMs = Math.max(16, opts.tickMs ?? 100);
   const { speak } = useSpeech();
@@ -84,8 +87,10 @@ export function useTypingEngine(
     playerMaxHp,
     enemyMaxHp,
     victory: undefined,
+    playCount: 0,
   }));
   const [nowMs, setNowMs] = useState<number>(Date.now());
+  const [playCount, setPlayCount] = useState(0);
   const startedRef = useRef(false);
 
   // バトル中はタイマー固定（使わない）。それ以外は従来通り。
@@ -135,6 +140,9 @@ export function useTypingEngine(
   );
 
   const start = useCallback(() => {
+    setPlayCount((e) => e + 1);
+    setVanishId(0);
+    setVanished(false);
     initOrder();
     startedRef.current = true;
     const now = Date.now();
@@ -165,8 +173,17 @@ export function useTypingEngine(
       playerMaxHp,
       enemyMaxHp,
       victory: undefined,
+      playCount: playCount,
     } as EngineStateEx);
-  }, [initOrder, opts.learningMode, playerMaxHp, enemyMaxHp]);
+  }, [
+    initOrder,
+    opts.learningMode,
+    playerMaxHp,
+    enemyMaxHp,
+    setVanishId,
+    setVanished,
+    playCount,
+  ]);
 
   // 通常モード時のみタイマー更新（バトル/学習は停止）
   useEffect(() => {
@@ -299,6 +316,7 @@ export function useTypingEngine(
 
   // applyBattleDamage を削除/未使用化し、代わりに2関数を定義
   const damagePlayerOnMiss = useCallback(() => {
+    setHurtId((n) => n + 1);
     if (!battleMode) return;
     // 学習モード中はHPを減らさない
     if (opts.learningMode) return;
@@ -313,7 +331,7 @@ export function useTypingEngine(
         victory: finished ? (s.enemyHp > 0 ? false : s.victory) : s.victory,
       };
     });
-  }, [battleMode, damagePerMiss, opts.learningMode]);
+  }, [battleMode, damagePerMiss, opts.learningMode, setHurtId]);
 
   const damageEnemyOnSentence = useCallback(() => {
     if (!battleMode) return;
@@ -354,7 +372,6 @@ export function useTypingEngine(
               (s) =>
                 ({ ...s, hintStep: 1, problemUsedHint: true } as EngineStateEx)
             );
-            setHurtId((n) => n + 1);
             damagePlayerOnMiss();
           } else if (state.hintStep === 1) {
             setState(
@@ -366,7 +383,6 @@ export function useTypingEngine(
                   problemUsedHint: true,
                 } as EngineStateEx)
             );
-            setHurtId((n) => n + 1);
             damagePlayerOnMiss();
           }
         }
@@ -412,7 +428,6 @@ export function useTypingEngine(
 
       // ダメージ適用
       if (!res.ok) {
-        setHurtId((n) => n + 1);
         damagePlayerOnMiss();
       }
 
@@ -455,7 +470,6 @@ export function useTypingEngine(
       damagePlayerOnMiss,
       damageEnemyOnSentence,
       setSlashId,
-      setHurtId,
     ]
   );
 

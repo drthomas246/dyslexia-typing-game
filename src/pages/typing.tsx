@@ -23,18 +23,6 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
-  // 敵の画像
-  const ENEMY_IMG = useMemo(() => {
-    const EnemyList = ["slime", "goblin", "dragon"];
-    const EMRandomNum = Math.floor(Math.random() * 3);
-    return `./images/monster/${EnemyList[EMRandomNum]}.png`;
-  }, []);
-  // 背景の画像
-  const BACKGROUND_IMG = useMemo(() => {
-    const BGRandomNum = Math.floor(Math.random() * 4);
-    return `./images/background/${BGRandomNum}.png`;
-  }, []);
-
   const [settings, setSettings] = useState<Settings>({
     durationSec: 60,
     sound: true,
@@ -51,6 +39,9 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
   const [hurtId, setHurtId] = useState(0);
   // 一問正解で敵 -10
   const damagePerHit = useMemo(() => 10, []);
+  // 消える（モンスターのフェードアウト）
+  const [vanishId, setVanishId] = useState(0);
+  const [vanished, setVanished] = useState(false);
 
   const engine = useTypingEngine(
     {
@@ -67,8 +58,23 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
     },
     QA,
     setSlashId,
-    setHurtId
+    setHurtId,
+    setVanishId,
+    setVanished
   );
+  // 敵の画像
+  const [ENEMY_IMG, setEnemyImg] = useState("");
+  useEffect(() => {
+    const EnemyList = ["slime", "goblin", "dragon"];
+    const EMRandomNum = Math.floor(Math.random() * 3);
+    setEnemyImg(`./images/monster/${EnemyList[EMRandomNum]}.png`);
+  }, [engine.state.playCount]);
+  // 背景の画像
+  const [BACKGROUND_IMG, setBackgroundImg] = useState("");
+  useEffect(() => {
+    const BGRandomNum = Math.floor(Math.random() * 3);
+    setBackgroundImg(`./images/background/${BGRandomNum}.png`);
+  }, [engine.state.playCount]);
 
   const settingsDisc = useDisclosure();
   const [resultOpen, setResultOpen] = useState(false);
@@ -78,10 +84,13 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
   // 終了を検知して開く（Enterに依存しない）
   useEffect(() => {
     if (engine.state.started && engine.state.finished) {
+      if (engine.state.enemyHp === 0) {
+        setVanishId((n) => n + 1);
+      }
       const id = setTimeout(() => setResultOpen(true), 0);
       return () => clearTimeout(id);
     }
-  }, [engine.state.started, engine.state.finished]);
+  }, [engine.state.started, engine.state.finished, engine.state.enemyHp]);
 
   // HP率（0〜100）
   const enemyHpPct = useMemo(
@@ -107,6 +116,49 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
       return Math.max(0, elapsed);
     }
   })();
+  const MonsterLayer = (
+    <>
+      <Image
+        src={BACKGROUND_IMG}
+        alt="Background"
+        fit="cover"
+        w="100%"
+        h="100%"
+      />
+      {!vanished && (
+        <motion.img
+          key={`monster-${vanishId}`}
+          src={ENEMY_IMG}
+          alt="Enemy"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+          }}
+          initial={{ opacity: 1, scale: 1, x: 0 }}
+          animate={{
+            opacity: vanishId > 0 ? [1, 1, 0] : 1,
+            x:
+              vanishId > 0
+                ? [0, -20, 20, -18, 18, -15, 15, -10, 10, -5, 5, 0]
+                : 0,
+            scale: vanishId > 0 ? 0.95 : 1, // 少し縮むとやられ感が出る
+          }}
+          transition={{
+            opacity: { duration: 1.2, ease: "easeOut", times: [0, 0.6, 1] },
+            x: { duration: 1.2, ease: "easeInOut" },
+            scale: { duration: 1.2, ease: "easeOut" },
+          }}
+          onAnimationComplete={() => {
+            if (vanishId > 0) setVanished(true);
+          }}
+        />
+      )}
+    </>
+  );
 
   if (page === "home" || QA === undefined) {
     return <App />;
@@ -161,7 +213,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
               <AnimatePresence>
                 {hurtId > 0 ? (
                   <motion.div
-                    key={hurtId} // クリックごとに再生
+                    key={`shake-${hurtId}`}
                     style={{
                       width: "100%",
                       height: "100%",
@@ -172,44 +224,11 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
                     transition={{ duration: 0.45, ease: "easeInOut" }}
                     exit={{ x: 0 }}
                   >
-                    <Image
-                      src={BACKGROUND_IMG}
-                      alt="Background"
-                      fit="cover"
-                      w="100%"
-                      h="100%"
-                    />
-                    <Image
-                      position="absolute"
-                      top="0"
-                      left="0"
-                      src={ENEMY_IMG}
-                      alt="Enemy"
-                      fit="contain"
-                      w="100%"
-                      h="100%"
-                    />
+                    {MonsterLayer}
                   </motion.div>
                 ) : (
-                  // 初期状態はアニメなしの静止コンテナを描画
                   <Box w="100%" h="100%" position="relative">
-                    <Image
-                      src={BACKGROUND_IMG}
-                      alt="Background"
-                      fit="cover"
-                      w="100%"
-                      h="100%"
-                    />
-                    <Image
-                      position="absolute"
-                      top="0"
-                      left="0"
-                      src={ENEMY_IMG}
-                      alt="Enemy"
-                      fit="contain"
-                      w="100%"
-                      h="100%"
-                    />
+                    {MonsterLayer}
                   </Box>
                 )}
               </AnimatePresence>
