@@ -22,6 +22,7 @@ import {
 } from "@chakra-ui/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
+
 export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
   const [settings, setSettings] = useState<Settings>({
     durationSec: 60,
@@ -101,21 +102,6 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
     () => Math.round((engine.state.playerHp / engine.state.playerMaxHp) * 100),
     [engine.state.playerHp, engine.state.playerMaxHp]
   );
-  const timeSecActual = (() => {
-    // startAt が無ければ念のため fallback
-    if (!engine.state.startAt) return settings.durationSec;
-
-    if (settings.learningMode) {
-      // 学習モードは timeLeftSec が固定なので、startAt からの実時間で計測
-      const now = Date.now();
-      const elapsed = Math.floor((now - engine.state.startAt) / 1000);
-      return Math.max(0, elapsed);
-    } else {
-      // 通常モードは timeLeftSec が減るので差分でOK
-      const elapsed = settings.durationSec - engine.timeLeftSec;
-      return Math.max(0, elapsed);
-    }
-  })();
   const MonsterLayer = (
     <>
       <Image
@@ -389,10 +375,10 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
           engine.start();
         }}
         summary={{
-          wpm: engine.wpm,
-          accuracy: engine.accuracy,
-          timeSec: timeSecActual,
-          errors: engine.state.errors,
+          timeSec: engine.actualTimeSec,
+          usedHintCount: engine.state.usedHintCount,
+          mistakeProblemCount: engine.state.mistakeProblemCount,
+          learningMode: settings.learningMode,
         }}
       />
     </Container>

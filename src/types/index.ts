@@ -128,3 +128,47 @@ export type EngineState = {
 export type QAPair = { ja: string; en: string; img?: string };
 
 export type JudgeResult = { ok: boolean; expected: string; received: string };
+
+export type ResultsDialogProps = {
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  onRetry: () => void;
+  summary: {
+    /** 実測プレイ時間（秒） */
+    timeSec: number;
+    /** ヒント（Tab/学習ヒントなど）を使った問題の個数 */
+    usedHintCount: number;
+    /** 1問内で一度でもミスがあった問題の個数 */
+    mistakeProblemCount: number;
+    /** 学習モードチェック */
+    learningMode: boolean;
+  };
+};
+
+export type EngineOptionsEx = EngineOptions & {
+  /** ドラクエ風バトル（HP制）を有効化。既定: true */
+  battleMode?: boolean;
+  /** プレイヤー/敵の最大HP（既定: 100） */
+  playerMaxHp?: number;
+  enemyMaxHp?: number;
+  /** 正打/ミス1回あたりのダメージ（既定: 正打2 / ミス5） */
+  damagePerHit?: number;
+  damagePerMiss?: number;
+  /** 文クリア時の敵ダメージ（未指定なら damagePerHit, さらに未指定なら 10） */
+  damagePerSentence?: number;
+};
+
+export type EngineStateEx = EngineState & {
+  /** HP 系と勝敗（バトル用） */
+  playerHp: number;
+  enemyHp: number;
+  playerMaxHp: number;
+  enemyMaxHp: number;
+  /** true=勝利 / false=敗北 / undefined=未決 */
+  victory?: boolean;
+  playCount: number;
+
+  /** 集計（ダイアログ用） */
+  usedHintCount: number; // ヒントを使った「問題」数
+  mistakeProblemCount: number; // 間違えがあった「問題」数
+};

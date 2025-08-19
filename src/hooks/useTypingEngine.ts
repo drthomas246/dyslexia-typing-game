@@ -1,31 +1,10 @@
 // src/hooks/useTypingEngine.ts
 import { useSpeech } from "@/hooks/useSpeech";
 import { judgeChar } from "@/lib/judge";
-import type { EngineOptions, EngineState, QAPair } from "@/types/index";
+import type { EngineOptionsEx, EngineStateEx, QAPair } from "@/types/index";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /** EngineOptions/State を壊さず拡張するためのローカル型 */
-type EngineOptionsEx = EngineOptions & {
-  /** ドラクエ風バトル（HP制）を有効化。既定: true */
-  battleMode?: boolean;
-  /** プレイヤー/敵の最大HP（既定: 100） */
-  playerMaxHp?: number;
-  enemyMaxHp?: number;
-  /** 正打/ミス1回あたりのダメージ（既定: 正打2 / ミス5） */
-  damagePerHit?: number;
-  damagePerMiss?: number;
-};
-
-type EngineStateEx = EngineState & {
-  /** HP 系と勝敗（バトル用） */
-  playerHp: number;
-  enemyHp: number;
-  playerMaxHp: number;
-  enemyMaxHp: number;
-  /** true=勝利 / false=敗北 / undefined=未決 */
-  victory?: boolean;
-  playCount: number;
-};
 
 function mulberry32(a: number) {
   return function () {
@@ -51,14 +30,11 @@ export function useTypingEngine(
   const tickMs = Math.max(16, opts.tickMs ?? 100);
   const { speak } = useSpeech();
 
-  // バトル系オプション（デフォルト値をここで確定）
+  // バトル系オプション
   const battleMode = opts.battleMode ?? true;
   const playerMaxHp = Math.max(1, opts.playerMaxHp ?? 100);
   const enemyMaxHp = Math.max(1, opts.enemyMaxHp ?? 100);
   const damagePerMiss = Math.max(1, opts.damagePerMiss ?? 5);
-
-  // damagePerHit を「文クリア時の敵ダメージ」として使う
-  // もし専用を用意したい場合は opts.damagePerSentence を見てください（なければ既存値/10にフォールバック）
   const damagePerSentence = Math.max(
     1,
     opts.damagePerSentence ?? opts.damagePerHit ?? 10
@@ -82,16 +58,30 @@ export function useTypingEngine(
     problemUsedHint: !!opts.learningMode,
     hintStep: 0,
     learningPhase: "study",
+    // HP
     playerHp: playerMaxHp,
     enemyHp: enemyMaxHp,
     playerMaxHp,
     enemyMaxHp,
     victory: undefined,
     playCount: 0,
+    // 集計
+    usedHintCount: 0,
+    mistakeProblemCount: 0,
   }));
   const [nowMs, setNowMs] = useState<number>(Date.now());
   const [playCount, setPlayCount] = useState(0);
   const startedRef = useRef(false);
+
+  // 終了時の最後の1問を二重加算しないためのフラグ
+  const talliedFinalRef = useRef(false);
+
+  // 実測時間（秒）
+  const actualTimeSec = useMemo(() => {
+    if (!state.started || !state.startAt) return 0;
+    const endAt = state.finished ? Date.now() : Date.now(); // 常に現在時刻基準（結果表示直前に参照される想定）
+    return Math.max(0, Math.floor((endAt - state.startAt) / 1000));
+  }, [state.started, state.startAt, state.finished]);
 
   // バトル中はタイマー固定（使わない）。それ以外は従来通り。
   const timeLeftSec = useMemo(() => {
@@ -141,6 +131,7 @@ export function useTypingEngine(
 
   const start = useCallback(() => {
     setPlayCount((e) => e + 1);
+    talliedFinalRef.current = false;
     setVanishId(0);
     setVanished(false);
     initOrder();
@@ -152,7 +143,7 @@ export function useTypingEngine(
       started: true,
       finished: false,
       startAt: now,
-      // 以降リセット
+      // リセット
       questionJa: "",
       answerEn: "",
       questionImg: undefined,
@@ -173,7 +164,10 @@ export function useTypingEngine(
       playerMaxHp,
       enemyMaxHp,
       victory: undefined,
-      playCount: playCount,
+      playCount,
+      // 集計初期化
+      usedHintCount: 0,
+      mistakeProblemCount: 0,
     } as EngineStateEx);
   }, [
     initOrder,
@@ -231,11 +225,22 @@ export function useTypingEngine(
   useEffect(() => {
     if (!state.started || state.finished) return;
     if (battleMode || opts.learningMode) return;
-    if (timeLeftSec <= 0)
+    if (timeLeftSec <= 0) {
+      // 最後の1問を取りこぼさない
+      if (!talliedFinalRef.current) {
+        setState((s) => ({
+          ...s,
+          usedHintCount: s.usedHintCount + (s.problemUsedHint ? 1 : 0),
+          mistakeProblemCount:
+            s.mistakeProblemCount + (s.problemHasMistake ? 1 : 0),
+        }));
+        talliedFinalRef.current = true;
+      }
       setState(
         (s) =>
           ({ ...s, finished: true, victory: s.enemyHp <= 0 } as EngineStateEx)
       );
+    }
   }, [
     timeLeftSec,
     state.started,
@@ -255,25 +260,38 @@ export function useTypingEngine(
     }));
   }, [opts.learningMode, state.started, state.finished]);
 
+  // ★ 前問のフラグを加算してから次へ
   const next = useCallback(() => {
     setState((s) => {
+      // 直前問題の集計（現在の問題フラグをカウント）
+      const addHint = s.problemUsedHint ? 1 : 0;
+      const addMist = s.problemHasMistake ? 1 : 0;
+
       const disqualified = s.problemHasMistake || s.problemUsedHint;
       const newCombo = disqualified ? 0 : s.combo + 1;
       const hasNext = s.index + 1 < order.length;
+
       if (!hasNext) {
+        // 最終問題：ここで集計して終了
         return {
           ...s,
+          usedHintCount: s.usedHintCount + addHint,
+          mistakeProblemCount: s.mistakeProblemCount + addMist,
           combo: newCombo,
           finished: true,
           victory: s.enemyHp <= 0,
         } as EngineStateEx;
       }
+
       const nextIndex = s.index + 1;
       const pairIndex = order[nextIndex] ?? 0;
       const pair: QAPair = QA[pairIndex] ?? QA[0];
       const learning = !!opts.learningMode;
+
       return {
         ...s,
+        usedHintCount: s.usedHintCount + addHint,
+        mistakeProblemCount: s.mistakeProblemCount + addMist,
         combo: newCombo,
         index: nextIndex,
         questionJa: pair.ja,
@@ -291,6 +309,16 @@ export function useTypingEngine(
   }, [order, opts.learningMode, QA]);
 
   const stop = useCallback(() => {
+    // 最後の1問を取りこぼさない（1回だけ）
+    if (!talliedFinalRef.current) {
+      setState((s) => ({
+        ...s,
+        usedHintCount: s.usedHintCount + (s.problemUsedHint ? 1 : 0),
+        mistakeProblemCount:
+          s.mistakeProblemCount + (s.problemHasMistake ? 1 : 0),
+      }));
+      talliedFinalRef.current = true;
+    }
     setState(
       (s) =>
         ({ ...s, finished: true, victory: s.enemyHp <= 0 } as EngineStateEx)
@@ -314,12 +342,11 @@ export function useTypingEngine(
     [opts.learningMode]
   );
 
-  // applyBattleDamage を削除/未使用化し、代わりに2関数を定義
+  // ダメージ：自分（ミス/ヒント時）。学習モードでは無効
   const damagePlayerOnMiss = useCallback(() => {
     setHurtId((n) => n + 1);
     if (!battleMode) return;
-    // 学習モード中はHPを減らさない
-    if (opts.learningMode) return;
+    if (opts.learningMode) return; // 学習モード中はHP減少なし
     setState((s) => {
       if (s.finished) return s;
       const playerHp = Math.max(0, s.playerHp - damagePerMiss);
@@ -333,6 +360,7 @@ export function useTypingEngine(
     });
   }, [battleMode, damagePerMiss, opts.learningMode, setHurtId]);
 
+  // ダメージ：敵（文クリア時）
   const damageEnemyOnSentence = useCallback(() => {
     if (!battleMode) return;
     setState((s) => {
@@ -359,7 +387,7 @@ export function useTypingEngine(
         return;
       }
 
-      // Tab: 通常 or（学習モードでも recall 中）は段階ヒント
+      // Tab: 通常 or（学習モードでも recall 中）は段階ヒント（学習モード中もHPは減らない仕様）
       if (key === "\t") {
         const inRecall =
           !!opts.learningMode &&
@@ -372,7 +400,7 @@ export function useTypingEngine(
               (s) =>
                 ({ ...s, hintStep: 1, problemUsedHint: true } as EngineStateEx)
             );
-            damagePlayerOnMiss();
+            if (!opts.learningMode) damagePlayerOnMiss();
           } else if (state.hintStep === 1) {
             setState(
               (s) =>
@@ -383,7 +411,7 @@ export function useTypingEngine(
                   problemUsedHint: true,
                 } as EngineStateEx)
             );
-            damagePlayerOnMiss();
+            if (!opts.learningMode) damagePlayerOnMiss();
           }
         }
         return;
@@ -404,7 +432,7 @@ export function useTypingEngine(
         return;
       }
 
-      // Enter: Stop は App 側で
+      // Enter: Stop は App 側
       if (key === "\n") return;
 
       // 既に正解長に達していたら無視
@@ -426,17 +454,17 @@ export function useTypingEngine(
           } as EngineStateEx)
       );
 
-      // ダメージ適用
+      // ミス時は即自ダメージ（学習モードではガードあり）
       if (!res.ok) {
         damagePlayerOnMiss();
       }
 
-      // 全字正解なら自動で次へ（学習2段階あり）
+      // 全字正解 → 文クリア
       const willCompleteLen = cursor + 1 === state.answerEn.length;
       const allPrevCorrect = state.correctMap.every(Boolean);
       const completesAllCorrect = willCompleteLen && res.ok && allPrevCorrect;
       if (completesAllCorrect) {
-        // 学習モード＋learnThenRecall＋study → recall 遷移
+        // 学習モード＋learnThenRecall＋study → recall 遷移（敵ダメージは与えない）
         if (
           opts.learningMode &&
           opts.learnThenRecall &&
@@ -455,7 +483,7 @@ export function useTypingEngine(
           );
           return;
         }
-        // 文クリア時の敵ダメージをここで適用
+        // 文クリア時の敵ダメージ
         setSlashId((n) => n + 1);
         damageEnemyOnSentence();
         setTimeout(next, 0);
@@ -493,5 +521,7 @@ export function useTypingEngine(
     next,
     onKey,
     setLearningPhase,
+    // 実測プレイ時間（秒）：結果ダイアログへそのまま渡せます
+    actualTimeSec,
   };
 }
