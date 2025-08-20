@@ -6,7 +6,6 @@ import {
   Drawer,
   Field,
   HStack,
-  NumberInput,
   Portal,
   RadioGroup,
   Stack,
@@ -41,30 +40,6 @@ export default function SettingsDrawerChakra({
             </Drawer.Header>
             <Drawer.Body>
               <Stack gap="6">
-                {/* プレイ時間 */}
-                <Field.Root>
-                  <Field.Label>ゲームの時間 (秒)</Field.Label>
-                  <NumberInput.Root
-                    value={String(settings.durationSec)}
-                    min={15}
-                    max={600}
-                    step={5}
-                    onValueChange={(e) =>
-                      set({
-                        durationSec: Math.max(
-                          15,
-                          Math.min(600, Number(e.value) || 0)
-                        ),
-                      })
-                    }
-                    width="200px"
-                  >
-                    <NumberInput.Control />
-                    <NumberInput.Input />
-                  </NumberInput.Root>
-                  <Field.HelperText>15〜600 秒の間</Field.HelperText>
-                </Field.Root>
-
                 <Field.Root>
                   <Field.Label>じゅん番</Field.Label>
                   <RadioGroup.Root

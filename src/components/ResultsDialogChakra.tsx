@@ -35,18 +35,6 @@ export default function ResultsModalChakra({
             <Dialog.Body>
               <HStack gap="6" wrap="wrap">
                 <Stat.Root>
-                  <Stat.Label>1分間に打った たん語の数</Stat.Label>
-                  <Stat.ValueText fontSize="2xl">
-                    {Math.round(summary.wpm)}
-                  </Stat.ValueText>
-                </Stat.Root>
-                <Stat.Root>
-                  <Stat.Label>正かくさ</Stat.Label>
-                  <Stat.ValueText fontSize="2xl">
-                    {Math.round(summary.accuracy)}%
-                  </Stat.ValueText>
-                </Stat.Root>
-                <Stat.Root>
                   <Stat.Label>時間</Stat.Label>
                   <Stat.ValueText fontSize="2xl">
                     {summary.timeSec}s
@@ -61,14 +49,14 @@ export default function ResultsModalChakra({
               </HStack>
             </Dialog.Body>
             <Dialog.Footer gap="2">
+              <Button colorPalette="blue" onClick={onRetry}>
+                もう一度やる
+              </Button>
               <Dialog.ActionTrigger asChild>
                 <Button variant="outline" onClick={() => setOpen(false)}>
                   とじる
                 </Button>
               </Dialog.ActionTrigger>
-              <Button colorPalette="blue" onClick={onRetry}>
-                もう一度やる
-              </Button>
             </Dialog.Footer>
           </Dialog.Content>
         </Dialog.Positioner>

@@ -27,9 +27,10 @@ export default function AnswerInputView({
   return (
     <Box
       fontFamily="mono"
-      fontSize={{ base: "lg", md: "2xl" }}
+      fontSize="6xl"
       lineHeight="1.8"
       wordBreak="break-word"
+      h="130px"
     >
       {displayChars.map((ch, i) => {
         if (!showHint) {

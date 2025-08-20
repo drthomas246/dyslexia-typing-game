@@ -45,7 +45,7 @@ export type ResultsModalProps = {
   open: boolean;
   setOpen: (v: boolean) => void;
   onRetry: () => void;
-  summary: { wpm: number; accuracy: number; timeSec: number; errors: number };
+  summary: { timeSec: number; errors: number };
 };
 
 // エンジン連携の最小インターフェース（オプショナル）

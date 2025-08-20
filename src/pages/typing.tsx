@@ -1,6 +1,5 @@
 import App from "@/App";
 import AnswerInputView from "@/components/AnswerInputView";
-import HUDChakra from "@/components/HUDChakra";
 import InputCapture from "@/components/InputCapture";
 import ResultsModalChakra from "@/components/ResultsDialogChakra";
 import SettingsDrawerChakra from "@/components/SettingsDrawerChakra";
@@ -58,18 +57,11 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
   }, [engine.state.started, engine.state.finished]);
   const timeSecActual = (() => {
     // startAt が無ければ念のため fallback
-    if (!engine.state.startAt) return settings.durationSec;
-
-    if (settings.learningMode) {
-      // 学習モードは timeLeftSec が固定なので、startAt からの実時間で計測
-      const now = Date.now();
-      const elapsed = Math.floor((now - engine.state.startAt) / 1000);
-      return Math.max(0, elapsed);
-    } else {
-      // 通常モードは timeLeftSec が減るので差分でOK
-      const elapsed = settings.durationSec - engine.timeLeftSec;
-      return Math.max(0, elapsed);
-    }
+    if (!engine.state.startAt) return 0;
+    // 学習モードは timeLeftSec が固定なので、startAt からの実時間で計測
+    const now = Date.now();
+    const elapsed = Math.floor((now - engine.state.startAt) / 1000);
+    return elapsed;
   })();
 
   if (page === "home" || QA === undefined) {
@@ -100,57 +92,64 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
           </HStack>
         </HStack>
 
-        <HUDChakra
+        {/* <HUDChakra
           wpm={engine.wpm}
           accuracy={engine.accuracy}
           timeLeftSec={engine.timeLeftSec}
           combo={engine.state.combo}
-        />
+        /> */}
 
         {/* 学習モードの段階表示（任意） */}
-        {settings.learningMode &&
-          settings.learnThenRecall &&
-          engine.state.started &&
-          !engine.state.finished && (
-            <HStack>
-              <Badge
-                colorPalette={
-                  engine.state.learningPhase === "study" ? "blue" : "purple"
-                }
-                variant="solid"
-              >
-                {engine.state.learningPhase === "study"
-                  ? "練習（スペル＋音声）"
-                  : "ふく習（Tabキーでヒント。1回目で音声・2回目でスペル）"}
-              </Badge>
-              <Text fontSize="sm" color="fg.muted">
-                学習で正かい →
-                ふく習へ。ふく習で正かいすると次の問題に進みます。
-              </Text>
-            </HStack>
-          )}
+        <HStack h="25px">
+          <Badge
+            colorPalette={
+              engine.state.learningPhase === "study" ? "blue" : "purple"
+            }
+            variant="solid"
+          >
+            {engine.state.learningPhase === "study"
+              ? "練習（スペル＋音声）"
+              : "ふく習（Tabキーでヒント。1回目で音声・2回目でスペル）"}
+          </Badge>
+          <Text fontSize="sm" color="fg.muted">
+            学習で正かい → ふく習へ。ふく習で正かいすると次の問題に進みます。
+          </Text>
+        </HStack>
 
         {/* 日本語の問題文 */}
-        <Box p="4" rounded="xl" borderWidth="1px" bg="bg.subtle">
+        <Box
+          p="4"
+          rounded="xl"
+          borderWidth="1px"
+          bg="bg.subtle"
+          h="calc(100vh - 398px)"
+        >
           <Grid
-            templateColumns={{ base: "1fr", md: "1.2fr 1fr" }}
+            templateColumns={"1fr calc(100vh - 432px)"}
             gap={4}
             alignItems="center"
           >
             <GridItem>
-              <Text fontSize={{ base: "md", md: "lg" }}>
+              <Text fontSize="6xl">
                 {engine.state.questionJa || "問題がここに出るよ"}
               </Text>
             </GridItem>
             <GridItem>
-              <AspectRatio ratio={1 / 1} maxW="200px">
+              <AspectRatio
+                ratio={1 / 1}
+                w="calc(100vh - 432px)"
+                h="calc(100vh - 432px)"
+              >
                 {engine.state.questionImg ? (
                   <Image
                     src={engine.state.questionImg}
                     alt={engine.state.questionJa}
-                    objectFit="contain"
+                    // objectFit="contain"
                     rounded="lg"
                     borderWidth="1px"
+                    maxW="300px"
+                    maxH="300px"
+                    m="auto"
                   />
                 ) : (
                   <Skeleton rounded="lg" />
@@ -207,8 +206,6 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
           engine.start();
         }}
         summary={{
-          wpm: engine.wpm,
-          accuracy: engine.accuracy,
           timeSec: timeSecActual,
           errors: engine.state.errors,
         }}

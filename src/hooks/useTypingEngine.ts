@@ -39,21 +39,16 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
     hintStep: 0,
     learningPhase: "study",
   }));
+
+  // 経過時間用
   const [nowMs, setNowMs] = useState<number>(Date.now());
   const startedRef = useRef(false);
 
-  const timeLeftSec = useMemo(() => {
-    if (opts.learningMode) return opts.durationSec;
-    if (!state.started || !state.startAt) return opts.durationSec;
-    const elapsedSec = Math.floor((nowMs - state.startAt) / 1000);
-    return Math.max(0, opts.durationSec - elapsedSec);
-  }, [
-    nowMs,
-    state.started,
-    state.startAt,
-    opts.durationSec,
-    opts.learningMode,
-  ]);
+  // 経過時間（秒）: startAt からの差分
+  const elapsedSec = useMemo(() => {
+    if (!state.started || !state.startAt) return 0;
+    return Math.max(0, Math.floor((nowMs - state.startAt) / 1000));
+  }, [nowMs, state.started, state.startAt]);
 
   const initOrder = useCallback(() => {
     const seed = opts.seed ?? Date.now() % 1_000_000;
@@ -112,14 +107,15 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
     });
   }, [initOrder, opts.learningMode]);
 
+  // タイマー（常に動かす：学習モードでも）
   useEffect(() => {
     if (!state.started || state.finished) return;
-    if (opts.learningMode) return;
     setNowMs(Date.now());
     const id = setInterval(() => setNowMs(Date.now()), tickMs);
     return () => clearInterval(id);
-  }, [state.started, state.finished, tickMs, opts.learningMode]);
+  }, [state.started, state.finished, tickMs]);
 
+  // 最初の問題ロード
   useEffect(() => {
     if (
       state.started &&
@@ -131,6 +127,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
     }
   }, [state.started, order, state.answerEn, loadPair]);
 
+  // 学習モードの最初の音声（study 段のみ）
   const spokenRef = useRef<string>("");
   useEffect(() => {
     if (!state.started || state.finished) return;
@@ -152,12 +149,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
     state.learningPhase,
   ]);
 
-  useEffect(() => {
-    if (!state.started || state.finished) return;
-    if (opts.learningMode) return;
-    if (timeLeftSec <= 0) setState((s) => ({ ...s, finished: true }));
-  }, [timeLeftSec, state.started, state.finished, opts.learningMode]);
-
+  // 学習モードでのヒント状態の維持
   useEffect(() => {
     if (!state.started || state.finished) return;
     const learning = !!opts.learningMode;
@@ -170,11 +162,9 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
 
   const next = useCallback(() => {
     setState((s) => {
-      const disqualified = s.problemHasMistake || s.problemUsedHint;
-      const newCombo = disqualified ? 0 : s.combo + 1;
       const hasNext = s.index + 1 < order.length;
       if (!hasNext) {
-        return { ...s, combo: newCombo, finished: true };
+        return { ...s, finished: true };
       }
       const nextIndex = s.index + 1;
       const pairIndex = order[nextIndex] ?? 0;
@@ -182,7 +172,6 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
       const learning = !!opts.learningMode;
       return {
         ...s,
-        combo: newCombo,
         index: nextIndex,
         questionJa: pair.ja,
         answerEn: pair.en,
@@ -239,7 +228,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
             setState((s) => ({
               ...s,
               hintStep: 1,
-              problemUsedHint: true, // 失格扱い（既に学習モード中は true のはずだが明示）
+              problemUsedHint: true,
             }));
           } else if (state.hintStep === 1) {
             setState((s) => ({
@@ -277,6 +266,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
         ...s,
         typed: s.typed + key,
         correctMap: [...s.correctMap, res.ok],
+        // スコア表示は行わないが、内部カウントは維持（互換性のため）
         hits: s.hits + (res.ok ? 1 : 0),
         errors: s.errors + (res.ok ? 0 : 1),
         problemHasMistake: s.problemHasMistake || !res.ok,
@@ -308,21 +298,11 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
     [state, next, opts.learningMode, opts.learnThenRecall, speak]
   );
 
-  const wpm = useMemo(() => {
-    const elapsedMin = (opts.durationSec - timeLeftSec) / 60;
-    return elapsedMin > 0 ? state.hits / 5 / elapsedMin : 0;
-  }, [state.hits, opts.durationSec, timeLeftSec]);
-
-  const accuracy = useMemo(() => {
-    const total = state.hits + state.errors;
-    return total ? (state.hits / total) * 100 : 100;
-  }, [state.hits, state.errors]);
-
   return {
     state,
-    timeLeftSec,
-    wpm,
-    accuracy,
+    // スコア系は返却しない（timeLeftSec / wpm / accuracy 削除）
+    // 経過時間のみ返す
+    elapsedSec,
     start,
     stop,
     next,
