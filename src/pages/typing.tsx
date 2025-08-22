@@ -92,28 +92,30 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
           </HStack>
         </HStack>
 
-        {/* <HUDChakra
-          wpm={engine.wpm}
-          accuracy={engine.accuracy}
-          timeLeftSec={engine.timeLeftSec}
-          combo={engine.state.combo}
-        /> */}
-
         {/* 学習モードの段階表示（任意） */}
         <HStack h="25px">
-          <Badge
-            colorPalette={
-              engine.state.learningPhase === "study" ? "blue" : "purple"
-            }
-            variant="solid"
-          >
-            {engine.state.learningPhase === "study"
-              ? "練習（スペル＋音声）"
-              : "ふく習（Tabキーでヒント。1回目で音声・2回目でスペル）"}
-          </Badge>
-          <Text fontSize="sm" color="fg.muted">
-            学習で正かい → ふく習へ。ふく習で正かいすると次の問題に進みます。
-          </Text>
+          {settings.learningMode ? (
+            <>
+              <Badge
+                colorPalette={
+                  engine.state.learningPhase === "study" ? "blue" : "purple"
+                }
+                variant="solid"
+              >
+                {engine.state.learningPhase === "study"
+                  ? "練習（スペル＋音声）"
+                  : "ふく習（Tabキーでヒント。1回目で音声・2回目でスペル）"}
+              </Badge>
+              <Text fontSize="sm" color="fg.muted">
+                学習で正かい →
+                ふく習へ。ふく習で正かいすると次の問題に進みます。
+              </Text>
+            </>
+          ) : (
+            <Badge colorPalette="orange" variant="solid">
+              テスト（Tabキーでヒント。1回目で音声・2回目でスペル）
+            </Badge>
+          )}
         </HStack>
 
         {/* 日本語の問題文 */}
@@ -207,7 +209,8 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
         }}
         summary={{
           timeSec: timeSecActual,
-          errors: engine.state.errors,
+          hints: engine.problemsWithHint,
+          errors: engine.problemsWithMistake,
         }}
       />
     </Container>

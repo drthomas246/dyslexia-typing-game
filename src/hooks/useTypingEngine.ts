@@ -35,21 +35,29 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
     errors: 0,
     combo: 0,
     problemHasMistake: false,
-    problemUsedHint: !!opts.learningMode,
+    problemUsedHint: false,
     hintStep: 0,
     learningPhase: "study",
   }));
 
-  // 経過時間用
+  // 経過時間（秒）
   const [nowMs, setNowMs] = useState<number>(Date.now());
-  const startedRef = useRef(false);
-
-  // 経過時間（秒）: startAt からの差分
   const elapsedSec = useMemo(() => {
     if (!state.started || !state.startAt) return 0;
     return Math.max(0, Math.floor((nowMs - state.startAt) / 1000));
   }, [nowMs, state.started, state.startAt]);
 
+  // 問題単位の集計（重複防止に Set を採用）
+  const mistakesSetRef = useRef<Set<number>>(new Set());
+  const hintsSetRef = useRef<Set<number>>(new Set());
+  const [problemsWithMistake, setProblemsWithMistake] = useState(0);
+  const [problemsWithHint, setProblemsWithHint] = useState(0);
+
+  // 進行制御
+  const progressingRef = useRef(false); // next() の再入防止
+  const startedRef = useRef(false); // 初回ロード制御
+
+  // 問題順の初期化
   const initOrder = useCallback(() => {
     const seed = opts.seed ?? Date.now() % 1_000_000;
     const indices = Array.from({ length: QA.length }, (_, i) => i);
@@ -57,11 +65,15 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
     setOrder(useRandom ? shuffle(indices, seed) : indices);
   }, [opts.seed, QA.length, opts.randomOrder]);
 
+  // 問題ロード
   const loadPair = useCallback(
     (nextIdx: number) => {
       const pairIndex = order[nextIdx] ?? 0;
       const pair: QAPair = QA[pairIndex] ?? QA[0];
       const learning = !!opts.learningMode;
+
+      progressingRef.current = false;
+
       setState((s) => ({
         ...s,
         index: nextIdx,
@@ -72,7 +84,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
         correctMap: [],
         showHint: learning,
         problemHasMistake: false,
-        problemUsedHint: learning,
+        problemUsedHint: false,
         hintStep: 0,
         learningPhase: "study",
       }));
@@ -80,11 +92,21 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
     [order, opts.learningMode, QA]
   );
 
+  // セッション開始
   const start = useCallback(() => {
     initOrder();
     startedRef.current = true;
     const now = Date.now();
     setNowMs(now);
+
+    // 集計をリセット
+    mistakesSetRef.current.clear();
+    hintsSetRef.current.clear();
+    setProblemsWithMistake(0);
+    setProblemsWithHint(0);
+
+    progressingRef.current = false;
+
     const learning = !!opts.learningMode;
     setState({
       started: true,
@@ -101,13 +123,13 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
       errors: 0,
       combo: 0,
       problemHasMistake: false,
-      problemUsedHint: learning,
+      problemUsedHint: false,
       hintStep: 0,
       learningPhase: "study",
     });
   }, [initOrder, opts.learningMode]);
 
-  // タイマー（常に動かす：学習モードでも）
+  // ストップウォッチ（時間制限は無し）
   useEffect(() => {
     if (!state.started || state.finished) return;
     setNowMs(Date.now());
@@ -127,7 +149,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
     }
   }, [state.started, order, state.answerEn, loadPair]);
 
-  // 学習モードの最初の音声（study 段のみ）
+  // 学習モードの study 段で最初の音声
   const spokenRef = useRef<string>("");
   useEffect(() => {
     if (!state.started || state.finished) return;
@@ -149,27 +171,51 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
     state.learningPhase,
   ]);
 
-  // 学習モードでのヒント状態の維持
+  // 学習モード中は showHint を維持（自動表示≠ヒント使用カウント）
   useEffect(() => {
     if (!state.started || state.finished) return;
     const learning = !!opts.learningMode;
     setState((s) => ({
       ...s,
       showHint: s.showHint || learning,
-      problemUsedHint: s.problemUsedHint || learning,
     }));
   }, [opts.learningMode, state.started, state.finished]);
 
+  // 現在の問題を重複なしで確定集計
+  const finalizeCurrentProblem = useCallback((s: EngineState) => {
+    const seqIndex = s.index; // 出題シーケンス上のインデックス
+    if (s.problemHasMistake) {
+      mistakesSetRef.current.add(seqIndex);
+    }
+    if (s.problemUsedHint) {
+      hintsSetRef.current.add(seqIndex);
+    }
+    // Set のサイズを state に反映
+    setProblemsWithMistake(mistakesSetRef.current.size);
+    setProblemsWithHint(hintsSetRef.current.size);
+  }, []);
+
   const next = useCallback(() => {
+    if (progressingRef.current) return; // 再入防止
+    progressingRef.current = true;
+
     setState((s) => {
+      // この問題を確定集計（Set により重複は無効化）
+      finalizeCurrentProblem(s);
+
       const hasNext = s.index + 1 < order.length;
       if (!hasNext) {
+        progressingRef.current = false;
         return { ...s, finished: true };
       }
+
       const nextIndex = s.index + 1;
       const pairIndex = order[nextIndex] ?? 0;
       const pair: QAPair = QA[pairIndex] ?? QA[0];
       const learning = !!opts.learningMode;
+
+      progressingRef.current = false;
+
       return {
         ...s,
         index: nextIndex,
@@ -180,16 +226,21 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
         correctMap: [],
         showHint: learning,
         problemHasMistake: false,
-        problemUsedHint: learning,
+        problemUsedHint: false,
         hintStep: 0,
         learningPhase: "study",
       };
     });
-  }, [order, opts.learningMode, QA]);
+  }, [order, opts.learningMode, QA, finalizeCurrentProblem]);
 
   const stop = useCallback(() => {
-    setState((s) => ({ ...s, finished: true }));
-  }, []);
+    setState((s) => {
+      // 最後の問題を未集計のままでも重複なしで確定
+      finalizeCurrentProblem(s);
+      progressingRef.current = false;
+      return { ...s, finished: true };
+    });
+  }, [finalizeCurrentProblem]);
 
   const setLearningPhase = useCallback(
     (phase: "study" | "recall") => {
@@ -221,20 +272,20 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
           !!opts.learnThenRecall &&
           state.learningPhase === "recall";
 
-        // 通常モード or （学習モードでも recall 中）は Tab 有効
+        // 通常モード or recall 段では Tab ヒントを有効化
         if (!opts.learningMode || inRecall) {
           if (state.hintStep === 0) {
-            speak(state.answerEn, { lang: "en-US" }); // 1回目=音声
+            speak(state.answerEn, { lang: "en-US" });
             setState((s) => ({
               ...s,
               hintStep: 1,
-              problemUsedHint: true,
+              problemUsedHint: true, // Tab 使用でのみカウント対象
             }));
           } else if (state.hintStep === 1) {
             setState((s) => ({
               ...s,
               hintStep: 2,
-              showHint: true, // 2回目=英語表示
+              showHint: true,
               problemUsedHint: true,
             }));
           }
@@ -266,7 +317,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
         ...s,
         typed: s.typed + key,
         correctMap: [...s.correctMap, res.ok],
-        // スコア表示は行わないが、内部カウントは維持（互換性のため）
+        // スコア表示はしないが互換のため内部カウントは維持
         hits: s.hits + (res.ok ? 1 : 0),
         errors: s.errors + (res.ok ? 0 : 1),
         problemHasMistake: s.problemHasMistake || !res.ok,
@@ -275,8 +326,9 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
       const willCompleteLen = cursor + 1 === state.answerEn.length;
       const allPrevCorrect = state.correctMap.every(Boolean);
       const completesAllCorrect = willCompleteLen && res.ok && allPrevCorrect;
+
       if (completesAllCorrect) {
-        // 学習モード＋二段階有効＋study段 → recall段へ
+        // 学習モードの二段階（study→recall）
         if (
           opts.learningMode &&
           opts.learnThenRecall &&
@@ -292,6 +344,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
           }));
           return;
         }
+        // 自動で次の問題へ（重複は Set で抑止）
         setTimeout(next, 0);
       }
     },
@@ -300,9 +353,9 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
 
   return {
     state,
-    // スコア系は返却しない（timeLeftSec / wpm / accuracy 削除）
-    // 経過時間のみ返す
     elapsedSec,
+    problemsWithMistake,
+    problemsWithHint,
     start,
     stop,
     next,

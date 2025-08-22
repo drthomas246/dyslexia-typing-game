@@ -67,22 +67,6 @@ export default function SettingsDrawerChakra({
                   </Field.HelperText>
                 </Field.Root>
 
-                {/* 効果音 */}
-                <Field.Root disabled>
-                  <Field.Label>こうか音</Field.Label>
-                  <Switch.Root
-                    checked={settings.sound}
-                    onCheckedChange={(e) => set({ sound: e.checked })}
-                    colorPalette="blue"
-                  >
-                    <Switch.HiddenInput />
-                    <Switch.Control />
-                    <Switch.Label>
-                      ボタンをおしたり正かいしたときに音が出るようにする
-                    </Switch.Label>
-                  </Switch.Root>
-                </Field.Root>
-
                 {/* 学習モード */}
                 <Field.Root>
                   <Field.Label>遊び方</Field.Label>

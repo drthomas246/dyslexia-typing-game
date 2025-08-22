@@ -35,13 +35,19 @@ export default function ResultsModalChakra({
             <Dialog.Body>
               <HStack gap="6" wrap="wrap">
                 <Stat.Root>
-                  <Stat.Label>時間</Stat.Label>
+                  <Stat.Label>かかった時間</Stat.Label>
                   <Stat.ValueText fontSize="2xl">
                     {summary.timeSec}s
                   </Stat.ValueText>
                 </Stat.Root>
                 <Stat.Root>
-                  <Stat.Label>ミスした数</Stat.Label>
+                  <Stat.Label>ヒントを表示した問題数</Stat.Label>
+                  <Stat.ValueText fontSize="2xl">
+                    {summary.hints}
+                  </Stat.ValueText>
+                </Stat.Root>
+                <Stat.Root>
+                  <Stat.Label>ミスした問題数</Stat.Label>
                   <Stat.ValueText fontSize="2xl">
                     {summary.errors}
                   </Stat.ValueText>
