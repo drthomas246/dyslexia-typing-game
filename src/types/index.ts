@@ -50,8 +50,15 @@ export type ResultsModalProps = {
 
 // エンジン連携の最小インターフェース（オプショナル）
 export type EngineLike = {
-  state: { learningPhase: "study" | "recall" };
-  setLearningPhase: (p: "study" | "recall") => void;
+  state: EngineStateEx;
+  wpm: number;
+  accuracy: number;
+  start: () => void;
+  stop: (reason?: "escape" | "user" | "dead" | "victory") => void;
+  next: () => void;
+  onKey: (key: string) => void;
+  setLearningPhase: (phase: "study" | "recall") => void; // ← 必須
+  actualTimeSec: number;
 };
 
 export type Settings = {
@@ -156,6 +163,16 @@ export type EngineOptionsEx = EngineOptions & {
   damagePerMiss?: number;
   /** 文クリア時の敵ダメージ（未指定なら damagePerHit, さらに未指定なら 10） */
   damagePerSentence?: number;
+  bgm?: boolean;
+  bgmSrc?: string;
+  bgmVolume?: number;
+  sfx?: boolean;
+  sfxVolume?: number;
+  sfxSlashSrc?: string;
+  sfxPunchSrc?: string;
+  sfxDefeatSrc?: string;
+  sfxEscapeSrc?: string;
+  sfxFallDownSrc?: string;
 };
 
 export type EngineStateEx = EngineState & {

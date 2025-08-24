@@ -102,12 +102,12 @@ export default function SettingsDrawerChakra({
                       <RadioGroup.Item value="testing">
                         <RadioGroup.ItemHiddenInput />
                         <RadioGroup.ItemIndicator />
-                        <RadioGroup.ItemText>テスト</RadioGroup.ItemText>
+                        <RadioGroup.ItemText>バトル</RadioGroup.ItemText>
                       </RadioGroup.Item>
                     </HStack>
                   </RadioGroup.Root>
                   <Field.HelperText>
-                    練習は答えがあるので、それを打ちます。テストは答えがないので自分で思い出して打ちます。
+                    練習は答えがあるので、それを打ちます。バトルは答えがないので自分で思い出して打ちます。
                   </Field.HelperText>
                 </Field.Root>
 

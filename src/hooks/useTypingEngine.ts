@@ -2,10 +2,10 @@
 import { useSpeech } from "@/hooks/useSpeech";
 import { judgeChar } from "@/lib/judge";
 import type { EngineOptionsEx, EngineStateEx, QAPair } from "@/types/index";
+import { Howl } from "howler";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-/** EngineOptions/State を壊さず拡張するためのローカル型 */
-
+/** 擬似乱数 */
 function mulberry32(a: number) {
   return function () {
     let t = (a += 0x6d2b79f5);
@@ -30,7 +30,7 @@ export function useTypingEngine(
   const tickMs = Math.max(16, opts.tickMs ?? 100);
   const { speak } = useSpeech();
 
-  // バトル系オプション
+  // ====== バトル系オプション ======
   const battleMode = opts.battleMode ?? true;
   const playerMaxHp = Math.max(1, opts.playerMaxHp ?? 100);
   const enemyMaxHp = Math.max(1, opts.enemyMaxHp ?? 100);
@@ -40,11 +40,104 @@ export function useTypingEngine(
     opts.damagePerSentence ?? opts.damagePerHit ?? 10
   );
 
+  // ====== BGM / SFX ======
+  const bgmEnabled = opts.bgm ?? true;
+  const bgmSrc = opts.bgmSrc ?? "./music/bgm/battle.mp3";
+  const bgmVolume = Math.min(1, Math.max(0, opts.bgmVolume ?? 0.5));
+  const bgmRef = useRef<Howl | null>(null);
+
+  const playBgm = useCallback(() => {
+    if (!bgmEnabled) return;
+    if (bgmRef.current && bgmRef.current.playing()) return;
+    if (bgmRef.current) {
+      try {
+        bgmRef.current.stop();
+        bgmRef.current.unload();
+      } catch {
+        return;
+      }
+      bgmRef.current = null;
+    }
+    const howl = new Howl({
+      src: [bgmSrc],
+      loop: true,
+      volume: bgmVolume,
+      html5: true,
+    });
+    bgmRef.current = howl;
+    howl.play();
+  }, [bgmEnabled, bgmSrc, bgmVolume]);
+
+  const stopBgm = useCallback(() => {
+    if (!bgmRef.current) return;
+    try {
+      bgmRef.current.stop();
+      bgmRef.current.unload();
+    } catch {
+      return;
+    }
+    bgmRef.current = null;
+  }, []);
+
+  // 短い効果音
+  const sfxEnabled = opts.sfx ?? true;
+  const sfxVolume = Math.min(1, Math.max(0, opts.sfxVolume ?? 0.8));
+  const sfxSlashSrc =
+    opts.sfxSlashSrc ?? "./music/soundEffects/killInSword.mp3"; // 敵へダメージ
+  const sfxPunchSrc = opts.sfxPunchSrc ?? "./music/soundEffects/punch.mp3"; // 自分ダメージ
+  const sfxDefeatSrc = opts.sfxDefeatSrc ?? "./music/soundEffects/defeat.mp3"; // 敵撃破
+  const sfxEscapeSrc = opts.sfxEscapeSrc ?? "./music/soundEffects/escape.mp3"; // 逃げる
+  const sfxFallDownSrc =
+    opts.sfxFallDownSrc ?? "./music/soundEffects/fallDown.mp3"; // 戦闘不能
+
+  const sfxSlashRef = useRef<Howl | null>(null);
+  const sfxPunchRef = useRef<Howl | null>(null);
+  const sfxDefeatRef = useRef<Howl | null>(null);
+  const sfxEscapeRef = useRef<Howl | null>(null);
+  const sfxFallDownRef = useRef<Howl | null>(null);
+
+  // --- SFX: 汎用 & 個別を useCallback 化 ---
+  const playSfx = useCallback(
+    (ref: React.RefObject<Howl | null>, src: string) => {
+      if (!sfxEnabled) return;
+      if (!ref.current) {
+        ref.current = new Howl({ src: [src], volume: sfxVolume, html5: true });
+      }
+      try {
+        ref.current.play();
+      } catch {
+        return;
+      }
+    },
+    [sfxEnabled, sfxVolume]
+  );
+
+  const playSfxSlash = useCallback(
+    () => playSfx(sfxSlashRef, sfxSlashSrc),
+    [playSfx, sfxSlashSrc]
+  );
+  const playSfxPunch = useCallback(
+    () => playSfx(sfxPunchRef, sfxPunchSrc),
+    [playSfx, sfxPunchSrc]
+  );
+  const playSfxDefeat = useCallback(
+    () => playSfx(sfxDefeatRef, sfxDefeatSrc),
+    [playSfx, sfxDefeatSrc]
+  );
+  const playSfxEscape = useCallback(
+    () => playSfx(sfxEscapeRef, sfxEscapeSrc),
+    [playSfx, sfxEscapeSrc]
+  );
+  const playSfxFallDown = useCallback(
+    () => playSfx(sfxFallDownRef, sfxFallDownSrc),
+    [playSfx, sfxFallDownSrc]
+  );
+
+  // ====== ステート ======
   const [order, setOrder] = useState<number[]>([]);
   const [state, setState] = useState<EngineStateEx>(() => ({
     started: false,
     finished: false,
-    // EngineState 由来
     questionJa: "",
     answerEn: "",
     typed: "",
@@ -58,47 +151,27 @@ export function useTypingEngine(
     problemUsedHint: !!opts.learningMode,
     hintStep: 0,
     learningPhase: "study",
-    // HP
     playerHp: playerMaxHp,
     enemyHp: enemyMaxHp,
     playerMaxHp,
     enemyMaxHp,
     victory: undefined,
     playCount: 0,
-    // 集計
     usedHintCount: 0,
     mistakeProblemCount: 0,
   }));
   const [nowMs, setNowMs] = useState<number>(Date.now());
   const [playCount, setPlayCount] = useState(0);
   const startedRef = useRef(false);
-
-  // 終了時の最後の1問を二重加算しないためのフラグ
   const talliedFinalRef = useRef(false);
 
-  // 実測時間（秒）
+  // ====== 経過時間（唯一の時間指標） ======
   const actualTimeSec = useMemo(() => {
     if (!state.started || !state.startAt) return 0;
-    const endAt = state.finished ? Date.now() : Date.now(); // 常に現在時刻基準（結果表示直前に参照される想定）
-    return Math.max(0, Math.floor((endAt - state.startAt) / 1000));
-  }, [state.started, state.startAt, state.finished]);
+    return Math.max(0, Math.floor((nowMs - state.startAt) / 1000));
+  }, [state.started, state.startAt, nowMs]);
 
-  // バトル中はタイマー固定（使わない）。それ以外は従来通り。
-  const timeLeftSec = useMemo(() => {
-    if (battleMode) return opts.durationSec;
-    if (opts.learningMode) return opts.durationSec;
-    if (!state.started || !state.startAt) return opts.durationSec;
-    const elapsedSec = Math.floor((nowMs - state.startAt) / 1000);
-    return Math.max(0, opts.durationSec - elapsedSec);
-  }, [
-    nowMs,
-    state.started,
-    state.startAt,
-    opts.durationSec,
-    opts.learningMode,
-    battleMode,
-  ]);
-
+  // 並び順
   const initOrder = useCallback(() => {
     const seed = opts.seed ?? Date.now() % 1_000_000;
     const indices = Array.from({ length: QA.length }, (_, i) => i);
@@ -129,12 +202,16 @@ export function useTypingEngine(
     [order, opts.learningMode, QA]
   );
 
+  // 開始
   const start = useCallback(() => {
     setPlayCount((e) => e + 1);
     talliedFinalRef.current = false;
     setVanishId(0);
     setVanished(false);
     initOrder();
+
+    if (!opts.learningMode) playBgm();
+
     startedRef.current = true;
     const now = Date.now();
     setNowMs(now);
@@ -143,7 +220,6 @@ export function useTypingEngine(
       started: true,
       finished: false,
       startAt: now,
-      // リセット
       questionJa: "",
       answerEn: "",
       questionImg: undefined,
@@ -158,14 +234,12 @@ export function useTypingEngine(
       problemUsedHint: learning,
       hintStep: 0,
       learningPhase: "study",
-      // HP 初期化
       playerHp: playerMaxHp,
       enemyHp: enemyMaxHp,
       playerMaxHp,
       enemyMaxHp,
       victory: undefined,
       playCount,
-      // 集計初期化
       usedHintCount: 0,
       mistakeProblemCount: 0,
     } as EngineStateEx);
@@ -177,17 +251,18 @@ export function useTypingEngine(
     setVanishId,
     setVanished,
     playCount,
+    playBgm,
   ]);
 
-  // 通常モード時のみタイマー更新（バトル/学習は停止）
+  // タイマー（全モードで経過時間を進める）
   useEffect(() => {
     if (!state.started || state.finished) return;
-    if (battleMode || opts.learningMode) return;
     setNowMs(Date.now());
     const id = setInterval(() => setNowMs(Date.now()), tickMs);
     return () => clearInterval(id);
-  }, [state.started, state.finished, tickMs, opts.learningMode, battleMode]);
+  }, [state.started, state.finished, tickMs]);
 
+  // 初回ロード
   useEffect(() => {
     if (
       state.started &&
@@ -199,7 +274,7 @@ export function useTypingEngine(
     }
   }, [state.started, order, state.answerEn, loadPair]);
 
-  // 学習モード: study 段のみ出題確定時に読み上げ
+  // 学習モード: study 段で読み上げ
   const spokenRef = useRef<string>("");
   useEffect(() => {
     if (!state.started || state.finished) return;
@@ -221,34 +296,6 @@ export function useTypingEngine(
     state.learningPhase,
   ]);
 
-  // タイムアップ（バトル/学習では無効）
-  useEffect(() => {
-    if (!state.started || state.finished) return;
-    if (battleMode || opts.learningMode) return;
-    if (timeLeftSec <= 0) {
-      // 最後の1問を取りこぼさない
-      if (!talliedFinalRef.current) {
-        setState((s) => ({
-          ...s,
-          usedHintCount: s.usedHintCount + (s.problemUsedHint ? 1 : 0),
-          mistakeProblemCount:
-            s.mistakeProblemCount + (s.problemHasMistake ? 1 : 0),
-        }));
-        talliedFinalRef.current = true;
-      }
-      setState(
-        (s) =>
-          ({ ...s, finished: true, victory: s.enemyHp <= 0 } as EngineStateEx)
-      );
-    }
-  }, [
-    timeLeftSec,
-    state.started,
-    state.finished,
-    opts.learningMode,
-    battleMode,
-  ]);
-
   // 学習モードの途中切替を同期
   useEffect(() => {
     if (!state.started || state.finished) return;
@@ -260,10 +307,9 @@ export function useTypingEngine(
     }));
   }, [opts.learningMode, state.started, state.finished]);
 
-  // ★ 前問のフラグを加算してから次へ
+  // 次の問題へ（前問のフラグ加算 → ロード）
   const next = useCallback(() => {
     setState((s) => {
-      // 直前問題の集計（現在の問題フラグをカウント）
       const addHint = s.problemUsedHint ? 1 : 0;
       const addMist = s.problemHasMistake ? 1 : 0;
 
@@ -272,7 +318,7 @@ export function useTypingEngine(
       const hasNext = s.index + 1 < order.length;
 
       if (!hasNext) {
-        // 最終問題：ここで集計して終了
+        stopBgm();
         return {
           ...s,
           usedHintCount: s.usedHintCount + addHint,
@@ -306,24 +352,116 @@ export function useTypingEngine(
         learningPhase: "study",
       } as EngineStateEx;
     });
-  }, [order, opts.learningMode, QA]);
+  }, [order, opts.learningMode, QA, stopBgm]);
 
-  const stop = useCallback(() => {
-    // 最後の1問を取りこぼさない（1回だけ）
-    if (!talliedFinalRef.current) {
-      setState((s) => ({
+  // 停止（逃げる/ユーザ停止/勝敗確定）
+  const stop = useCallback(
+    (reason?: "escape" | "user" | "dead" | "victory") => {
+      if (!talliedFinalRef.current) {
+        setState((s) => ({
+          ...s,
+          usedHintCount: s.usedHintCount + (s.problemUsedHint ? 1 : 0),
+          mistakeProblemCount:
+            s.mistakeProblemCount + (s.problemHasMistake ? 1 : 0),
+        }));
+        talliedFinalRef.current = true;
+      }
+
+      if (reason === "escape" && !opts.learningMode) {
+        try {
+          playSfxEscape();
+        } catch {
+          return;
+        }
+      }
+
+      stopBgm();
+
+      setState((s) => {
+        if (s.finished) return s;
+        let victory = s.victory;
+        if (reason === "escape") victory = false;
+        if (reason === "dead") victory = false;
+        if (reason === "victory") victory = true;
+        return { ...s, finished: true, victory } as EngineStateEx;
+      });
+    },
+    [opts.learningMode, playSfxEscape, stopBgm]
+  );
+
+  // 自分ダメージ（ミス/ヒント時）。学習モードではHP減少なし
+  const damagePlayerOnMiss = useCallback(() => {
+    setHurtId((n) => n + 1);
+    if (!battleMode) return;
+    if (opts.learningMode) return;
+    playSfxPunch();
+
+    setState((s) => {
+      if (s.finished) return s;
+      const playerHp = Math.max(0, s.playerHp - damagePerMiss);
+      const justDied = s.playerHp > 0 && playerHp === 0;
+
+      if (justDied) {
+        // 外側の try/catch は不要（内部で安全に処理）
+        playSfxFallDown();
+        stopBgm();
+      }
+
+      const finished = playerHp <= 0 || s.enemyHp <= 0;
+      return {
         ...s,
-        usedHintCount: s.usedHintCount + (s.problemUsedHint ? 1 : 0),
-        mistakeProblemCount:
-          s.mistakeProblemCount + (s.problemHasMistake ? 1 : 0),
-      }));
-      talliedFinalRef.current = true;
-    }
-    setState(
-      (s) =>
-        ({ ...s, finished: true, victory: s.enemyHp <= 0 } as EngineStateEx)
-    );
-  }, []);
+        playerHp,
+        finished: finished ? true : s.finished,
+        victory: finished ? (s.enemyHp > 0 ? false : s.victory) : s.victory,
+      };
+    });
+  }, [
+    battleMode,
+    damagePerMiss,
+    opts.learningMode,
+    setHurtId,
+    playSfxPunch,
+    playSfxFallDown,
+    stopBgm,
+  ]);
+
+  // 敵ダメージ（文クリア時）
+  const damageEnemyOnSentence = useCallback(() => {
+    if (!battleMode) return;
+
+    if (!opts.learningMode) playSfxSlash();
+
+    setState((s) => {
+      if (s.finished) return s;
+
+      const newEnemyHp = Math.max(0, s.enemyHp - damagePerSentence);
+      const killedNow = s.enemyHp > 0 && newEnemyHp === 0;
+
+      if (killedNow) {
+        if (!opts.learningMode) {
+          // 外側の try/catch は不要（内部で安全に処理）
+          playSfxDefeat();
+        }
+        // 同上
+        stopBgm();
+      }
+
+      const finished = s.playerHp <= 0 || newEnemyHp <= 0;
+      return {
+        ...s,
+        enemyHp: newEnemyHp,
+        finished: finished ? true : s.finished,
+        victory: finished ? newEnemyHp <= 0 && s.playerHp > 0 : s.victory,
+      };
+    });
+  }, [
+    battleMode,
+    damagePerSentence,
+    opts.learningMode,
+    playSfxSlash,
+    playSfxDefeat,
+    stopBgm,
+  ]);
 
   const setLearningPhase = useCallback(
     (phase: "study" | "recall") => {
@@ -342,52 +480,19 @@ export function useTypingEngine(
     [opts.learningMode]
   );
 
-  // ダメージ：自分（ミス/ヒント時）。学習モードでは無効
-  const damagePlayerOnMiss = useCallback(() => {
-    setHurtId((n) => n + 1);
-    if (!battleMode) return;
-    if (opts.learningMode) return; // 学習モード中はHP減少なし
-    setState((s) => {
-      if (s.finished) return s;
-      const playerHp = Math.max(0, s.playerHp - damagePerMiss);
-      const finished = playerHp <= 0 || s.enemyHp <= 0;
-      return {
-        ...s,
-        playerHp,
-        finished: finished ? true : s.finished,
-        victory: finished ? (s.enemyHp > 0 ? false : s.victory) : s.victory,
-      };
-    });
-  }, [battleMode, damagePerMiss, opts.learningMode, setHurtId]);
-
-  // ダメージ：敵（文クリア時）
-  const damageEnemyOnSentence = useCallback(() => {
-    if (!battleMode) return;
-    setState((s) => {
-      if (s.finished) return s;
-      const enemyHp = Math.max(0, s.enemyHp - damagePerSentence);
-      const finished = s.playerHp <= 0 || enemyHp <= 0;
-      return {
-        ...s,
-        enemyHp,
-        finished: finished ? true : s.finished,
-        victory: finished ? enemyHp <= 0 && s.playerHp > 0 : s.victory,
-      };
-    });
-  }, [battleMode, damagePerSentence]);
-
+  // 入力処理
   const onKey = useCallback(
     (key: string) => {
       if (!state.started || state.finished || state.answerEn.length === 0)
         return;
 
-      // Space: 次の問題
+      // Space: 次へ
       if (key === " ") {
         next();
         return;
       }
 
-      // Tab: 通常 or（学習モードでも recall 中）は段階ヒント（学習モード中もHPは減らない仕様）
+      // Tab: 段階ヒント（学習モード recall 中も可）
       if (key === "\t") {
         const inRecall =
           !!opts.learningMode &&
@@ -432,13 +537,13 @@ export function useTypingEngine(
         return;
       }
 
-      // Enter: Stop は App 側
+      // Enter は App 側で Stop
       if (key === "\n") return;
 
-      // 既に正解長に達していたら無視
+      // 既に正解長に達していれば無視
       if (state.typed.length >= state.answerEn.length) return;
 
-      // 判定
+      // 1文字判定
       const cursor = state.typed.length;
       const res = judgeChar(state.answerEn, cursor, key);
 
@@ -454,17 +559,15 @@ export function useTypingEngine(
           } as EngineStateEx)
       );
 
-      // ミス時は即自ダメージ（学習モードではガードあり）
-      if (!res.ok) {
-        damagePlayerOnMiss();
-      }
+      // ミス時は即ダメージ（学習モードは無効）
+      if (!res.ok) damagePlayerOnMiss();
 
-      // 全字正解 → 文クリア
+      // 全文字正解 → 敵ダメージ → 次へ
       const willCompleteLen = cursor + 1 === state.answerEn.length;
       const allPrevCorrect = state.correctMap.every(Boolean);
       const completesAllCorrect = willCompleteLen && res.ok && allPrevCorrect;
       if (completesAllCorrect) {
-        // 学習モード＋learnThenRecall＋study → recall 遷移（敵ダメージは与えない）
+        // 学習モード learn-then-recall の study 段はダメージせず recall へ
         if (
           opts.learningMode &&
           opts.learnThenRecall &&
@@ -483,7 +586,6 @@ export function useTypingEngine(
           );
           return;
         }
-        // 文クリア時の敵ダメージ
         setSlashId((n) => n + 1);
         damageEnemyOnSentence();
         setTimeout(next, 0);
@@ -501,27 +603,63 @@ export function useTypingEngine(
     ]
   );
 
+  // 指標
   const wpm = useMemo(() => {
-    const elapsedMin = (opts.durationSec - timeLeftSec) / 60;
+    const elapsedMin = actualTimeSec / 60;
     return elapsedMin > 0 ? state.hits / 5 / elapsedMin : 0;
-  }, [state.hits, opts.durationSec, timeLeftSec]);
+  }, [state.hits, actualTimeSec]);
 
   const accuracy = useMemo(() => {
     const total = state.hits + state.errors;
     return total ? (state.hits / total) * 100 : 100;
   }, [state.hits, state.errors]);
 
+  // クリーンアップ
+  useEffect(() => {
+    return () => {
+      stopBgm();
+      try {
+        sfxSlashRef.current?.unload();
+      } catch {
+        return;
+      }
+      try {
+        sfxPunchRef.current?.unload();
+      } catch {
+        return;
+      }
+      try {
+        sfxDefeatRef.current?.unload();
+      } catch {
+        return;
+      }
+      try {
+        sfxEscapeRef.current?.unload();
+      } catch {
+        return;
+      }
+      try {
+        sfxFallDownRef.current?.unload();
+      } catch {
+        return;
+      }
+      sfxSlashRef.current = null;
+      sfxPunchRef.current = null;
+      sfxDefeatRef.current = null;
+      sfxEscapeRef.current = null;
+      sfxFallDownRef.current = null;
+    };
+  }, [stopBgm]);
+
   return {
     state,
-    timeLeftSec,
     wpm,
     accuracy,
     start,
-    stop,
+    stop, // ← 逃げる含め統一API
     next,
     onKey,
     setLearningPhase,
-    // 実測プレイ時間（秒）：結果ダイアログへそのまま渡せます
-    actualTimeSec,
+    actualTimeSec, // ← 唯一の時間指標
   };
 }

@@ -167,7 +167,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
                 {settings.learningMode ? "始める" : "バトル"}
               </Button>
             ) : (
-              <Button colorPalette="red" onClick={engine.stop}>
+              <Button colorPalette="red" onClick={() => engine.stop("escape")}>
                 {settings.learningMode ? "終わる" : "にげる"}
               </Button>
             )}
