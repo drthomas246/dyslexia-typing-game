@@ -40,6 +40,33 @@ export default function SettingsDrawerChakra({
             </Drawer.Header>
             <Drawer.Body>
               <Stack gap="6">
+                {/* 学習モード */}
+                <Field.Root>
+                  <Field.Label>遊び方</Field.Label>
+                  <RadioGroup.Root
+                    value={settings.learningMode ? "learning" : "testing"}
+                    onValueChange={(e) =>
+                      set({ learningMode: e.value === "learning" })
+                    }
+                  >
+                    <HStack gap="6">
+                      <RadioGroup.Item value="learning">
+                        <RadioGroup.ItemHiddenInput />
+                        <RadioGroup.ItemIndicator />
+                        <RadioGroup.ItemText>練習</RadioGroup.ItemText>
+                      </RadioGroup.Item>
+                      <RadioGroup.Item value="testing">
+                        <RadioGroup.ItemHiddenInput />
+                        <RadioGroup.ItemIndicator />
+                        <RadioGroup.ItemText>バトル</RadioGroup.ItemText>
+                      </RadioGroup.Item>
+                    </HStack>
+                  </RadioGroup.Root>
+                  <Field.HelperText>
+                    練習は答えがあるので、それを打ちます。バトルは答えがないので自分で思い出して打ちます。
+                  </Field.HelperText>
+                </Field.Root>
+
                 {/* 難易度 */}
                 <Field.Root>
                   <Field.Label>じゅん番</Field.Label>
@@ -69,7 +96,7 @@ export default function SettingsDrawerChakra({
                 </Field.Root>
 
                 {/* 効果音 */}
-                <Field.Root disabled>
+                <Field.Root disabled={settings.learningMode}>
                   <Field.Label>こうか音</Field.Label>
                   <Switch.Root
                     checked={settings.sound}
@@ -78,47 +105,20 @@ export default function SettingsDrawerChakra({
                   >
                     <Switch.HiddenInput />
                     <Switch.Control />
-                    <Switch.Label>
-                      ボタンをおしたり正かいしたときに音が出るようにする
-                    </Switch.Label>
+                    <Switch.Label>音をならす</Switch.Label>
                   </Switch.Root>
-                </Field.Root>
-
-                {/* 学習モード */}
-                <Field.Root>
-                  <Field.Label>遊び方</Field.Label>
-                  <RadioGroup.Root
-                    value={settings.learningMode ? "learning" : "testing"}
-                    onValueChange={(e) =>
-                      set({ learningMode: e.value === "learning" })
-                    }
-                  >
-                    <HStack gap="6">
-                      <RadioGroup.Item value="learning">
-                        <RadioGroup.ItemHiddenInput />
-                        <RadioGroup.ItemIndicator />
-                        <RadioGroup.ItemText>練習</RadioGroup.ItemText>
-                      </RadioGroup.Item>
-                      <RadioGroup.Item value="testing">
-                        <RadioGroup.ItemHiddenInput />
-                        <RadioGroup.ItemIndicator />
-                        <RadioGroup.ItemText>バトル</RadioGroup.ItemText>
-                      </RadioGroup.Item>
-                    </HStack>
-                  </RadioGroup.Root>
                   <Field.HelperText>
-                    練習は答えがあるので、それを打ちます。バトルは答えがないので自分で思い出して打ちます。
+                    バトルのときに、「音楽がなったり・正かいや間違えたときに音が出る」ようにする
                   </Field.HelperText>
                 </Field.Root>
 
                 {/* 学習→リコール（2段階） */}
-                <Field.Root>
+                <Field.Root disabled={!settings.learningMode}>
                   <Field.Label>練習→ふく習→次の問題（2だん階）</Field.Label>
                   <Switch.Root
                     checked={learnThenRecall}
                     onCheckedChange={(e) => set({ learnThenRecall: e.checked })}
                     colorPalette="blue"
-                    disabled={!settings.learningMode}
                   >
                     <Switch.HiddenInput />
                     <Switch.Control />

@@ -37,14 +37,14 @@ export default function AnswerInputView({
           if (typed.length === 0) return null;
           if (i >= typed.length) return null; // 未入力は表示しない
           if (i === last) {
-            const color = correctMap[i] ? "blue.600" : "red.500";
+            const color = correctMap[i] ? "blue.solid" : "red.solid";
             return (
               <Box as="span" key={i} color={color} whiteSpace="pre">
                 {typed[i]}
               </Box>
             );
           }
-          const color = correctMap[i] ? "black" : "red.500";
+          const color = correctMap[i] ? "fg" : "red.solid";
           return (
             <Box as="span" key={i} color={color} whiteSpace="pre">
               {typed[i]}
@@ -57,7 +57,7 @@ export default function AnswerInputView({
           // 入力済み部分
           if (i === last) {
             // 直近は青/赤
-            const color = correctMap[i] ? "blue.600" : "red.500";
+            const color = correctMap[i] ? "blue.solid" : "red.solid";
             return (
               <Box as="span" key={i} color={color} whiteSpace="pre">
                 {typed[i]}
@@ -65,7 +65,7 @@ export default function AnswerInputView({
             );
           }
           // それ以前は「正解=黒 / 不正解=赤」
-          const color = correctMap[i] ? "black" : "red.500";
+          const color = correctMap[i] ? "fg" : "red.solid";
           return (
             <Box as="span" key={i} color={color} whiteSpace="pre">
               {typed[i]}
@@ -74,7 +74,7 @@ export default function AnswerInputView({
         } else {
           // 未入力は答えを灰色ゴースト表示
           return (
-            <Box as="span" key={i} color="gray.400" whiteSpace="pre">
+            <Box as="span" key={i} color="gray.focusRing" whiteSpace="pre">
               {ch}
             </Box>
           );

@@ -25,11 +25,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
   const [settings, setSettings] = useState<Settings>({
-    durationSec: 60,
     sound: true,
     language: "ja",
     learningMode: true,
-    // 学習→リコール（二段階）
     learnThenRecall: true,
     orderMode: "sequential",
   });
@@ -46,16 +44,15 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
 
   const engine = useTypingEngine(
     {
-      durationSec: settings.durationSec,
+      sound: settings.sound,
       learningMode: settings.learningMode,
-      // 二段階学習フローをエンジンへ
       learnThenRecall: settings.learnThenRecall,
       randomOrder: settings.orderMode === "random",
-      battleMode: true, // バトルON
+      battleMode: true,
       playerMaxHp: 100,
       enemyMaxHp: damagePerHit * QA.length,
-      damagePerHit: 10, // 一問正解で敵 -10
-      damagePerMiss: 5, // ミス1打で自 -5
+      damagePerHit: 10,
+      damagePerMiss: 5,
     },
     QA,
     setSlashId,
@@ -63,6 +60,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
     setVanishId,
     setVanished
   );
+
   // 敵の画像
   const [ENEMY_IMG, setEnemyImg] = useState("");
   useEffect(() => {
@@ -227,8 +225,8 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
             </Box>
             <Box w="450px">
               {/* 敵のセリフ（日本語） */}
-              <Box rounded="lg" borderWidth="1px" p="3" bg="whiteAlpha.800">
-                <Text fontSize={{ base: "lg", md: "xl" }}>
+              <Box rounded="lg" borderWidth="1px" p="3" bg="gray.subtle">
+                <Text fontSize={{ base: "lg", md: "xl" }} color="fg">
                   {engine.state.questionJa
                     ? engine.state.questionJa
                     : settings.learningMode

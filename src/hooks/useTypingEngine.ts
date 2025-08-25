@@ -1,7 +1,7 @@
 // src/hooks/useTypingEngine.ts
 import { useSpeech } from "@/hooks/useSpeech";
 import { judgeChar } from "@/lib/judge";
-import type { EngineOptionsEx, EngineStateEx, QAPair } from "@/types/index";
+import type { EngineOptions, EngineState, QAPair } from "@/types/index";
 import { Howl } from "howler";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -20,7 +20,7 @@ function shuffle<T>(arr: T[], seed: number) {
 }
 
 export function useTypingEngine(
-  opts: EngineOptionsEx,
+  opts: EngineOptions,
   QA: QAPair[],
   setSlashId: React.Dispatch<React.SetStateAction<number>>,
   setHurtId: React.Dispatch<React.SetStateAction<number>>,
@@ -40,8 +40,11 @@ export function useTypingEngine(
     opts.damagePerSentence ?? opts.damagePerHit ?? 10
   );
 
-  // ====== BGM / SFX ======
-  const bgmEnabled = opts.bgm ?? true;
+  // ====== サウンド設定（Master: sound） ======
+  // NOTE: EngineOptions に sound?: boolean を追加して利用します（既定 true）。
+  const soundMaster = opts.sound ?? true;
+  // BGM（学習モード中は鳴らさない運用は従来通り）
+  const bgmEnabled = soundMaster && (opts.bgm ?? true);
   const bgmSrc = opts.bgmSrc ?? "./music/bgm/battle.mp3";
   const bgmVolume = Math.min(1, Math.max(0, opts.bgmVolume ?? 0.5));
   const bgmRef = useRef<Howl | null>(null);
@@ -54,7 +57,7 @@ export function useTypingEngine(
         bgmRef.current.stop();
         bgmRef.current.unload();
       } catch {
-        return;
+        /* ignore */
       }
       bgmRef.current = null;
     }
@@ -74,13 +77,13 @@ export function useTypingEngine(
       bgmRef.current.stop();
       bgmRef.current.unload();
     } catch {
-      return;
+      /* ignore */
     }
     bgmRef.current = null;
   }, []);
 
-  // 短い効果音
-  const sfxEnabled = opts.sfx ?? true;
+  // SFX（短い効果音）
+  const sfxEnabled = soundMaster && (opts.sfx ?? true);
   const sfxVolume = Math.min(1, Math.max(0, opts.sfxVolume ?? 0.8));
   const sfxSlashSrc =
     opts.sfxSlashSrc ?? "./music/soundEffects/killInSword.mp3"; // 敵へダメージ
@@ -96,7 +99,6 @@ export function useTypingEngine(
   const sfxEscapeRef = useRef<Howl | null>(null);
   const sfxFallDownRef = useRef<Howl | null>(null);
 
-  // --- SFX: 汎用 & 個別を useCallback 化 ---
   const playSfx = useCallback(
     (ref: React.RefObject<Howl | null>, src: string) => {
       if (!sfxEnabled) return;
@@ -106,7 +108,7 @@ export function useTypingEngine(
       try {
         ref.current.play();
       } catch {
-        return;
+        /* ignore */
       }
     },
     [sfxEnabled, sfxVolume]
@@ -135,7 +137,7 @@ export function useTypingEngine(
 
   // ====== ステート ======
   const [order, setOrder] = useState<number[]>([]);
-  const [state, setState] = useState<EngineStateEx>(() => ({
+  const [state, setState] = useState<EngineState>(() => ({
     started: false,
     finished: false,
     questionJa: "",
@@ -210,7 +212,10 @@ export function useTypingEngine(
     setVanished(false);
     initOrder();
 
-    if (!opts.learningMode) playBgm();
+    // 学習モードではBGMを鳴らさない
+    if (!opts.learningMode) {
+      playBgm();
+    }
 
     startedRef.current = true;
     const now = Date.now();
@@ -242,7 +247,7 @@ export function useTypingEngine(
       playCount,
       usedHintCount: 0,
       mistakeProblemCount: 0,
-    } as EngineStateEx);
+    } as EngineState);
   }, [
     initOrder,
     opts.learningMode,
@@ -307,7 +312,7 @@ export function useTypingEngine(
     }));
   }, [opts.learningMode, state.started, state.finished]);
 
-  // 次の問題へ（前問のフラグ加算 → ロード）
+  // 次の問題へ（前問のフラグ加算 → ロード/終了）
   const next = useCallback(() => {
     setState((s) => {
       const addHint = s.problemUsedHint ? 1 : 0;
@@ -326,7 +331,7 @@ export function useTypingEngine(
           combo: newCombo,
           finished: true,
           victory: s.enemyHp <= 0,
-        } as EngineStateEx;
+        } as EngineState;
       }
 
       const nextIndex = s.index + 1;
@@ -350,13 +355,14 @@ export function useTypingEngine(
         problemUsedHint: learning,
         hintStep: 0,
         learningPhase: "study",
-      } as EngineStateEx;
+      } as EngineState;
     });
   }, [order, opts.learningMode, QA, stopBgm]);
 
-  // 停止（逃げる/ユーザ停止/勝敗確定）
+  // 手動停止（逃げる/ユーザ停止/勝敗確定）
   const stop = useCallback(
     (reason?: "escape" | "user" | "dead" | "victory") => {
+      // 最後の1問の集計取りこぼし防止（1回だけ）
       if (!talliedFinalRef.current) {
         setState((s) => ({
           ...s,
@@ -368,11 +374,7 @@ export function useTypingEngine(
       }
 
       if (reason === "escape" && !opts.learningMode) {
-        try {
-          playSfxEscape();
-        } catch {
-          return;
-        }
+        playSfxEscape();
       }
 
       stopBgm();
@@ -383,7 +385,7 @@ export function useTypingEngine(
         if (reason === "escape") victory = false;
         if (reason === "dead") victory = false;
         if (reason === "victory") victory = true;
-        return { ...s, finished: true, victory } as EngineStateEx;
+        return { ...s, finished: true, victory } as EngineState;
       });
     },
     [opts.learningMode, playSfxEscape, stopBgm]
@@ -393,7 +395,7 @@ export function useTypingEngine(
   const damagePlayerOnMiss = useCallback(() => {
     setHurtId((n) => n + 1);
     if (!battleMode) return;
-    if (opts.learningMode) return;
+    if (opts.learningMode) return; // 学習モード中はHP減少なし
     playSfxPunch();
 
     setState((s) => {
@@ -402,7 +404,6 @@ export function useTypingEngine(
       const justDied = s.playerHp > 0 && playerHp === 0;
 
       if (justDied) {
-        // 外側の try/catch は不要（内部で安全に処理）
         playSfxFallDown();
         stopBgm();
       }
@@ -439,10 +440,8 @@ export function useTypingEngine(
 
       if (killedNow) {
         if (!opts.learningMode) {
-          // 外側の try/catch は不要（内部で安全に処理）
           playSfxDefeat();
         }
-        // 同上
         stopBgm();
       }
 
@@ -463,6 +462,7 @@ export function useTypingEngine(
     stopBgm,
   ]);
 
+  // フェーズ手動切替（study/recall）
   const setLearningPhase = useCallback(
     (phase: "study" | "recall") => {
       setState(
@@ -474,7 +474,7 @@ export function useTypingEngine(
             typed: "",
             correctMap: [],
             hintStep: 0,
-          } as EngineStateEx)
+          } as EngineState)
       );
     },
     [opts.learningMode]
@@ -503,7 +503,7 @@ export function useTypingEngine(
             speak(state.answerEn, { lang: "en-US" });
             setState(
               (s) =>
-                ({ ...s, hintStep: 1, problemUsedHint: true } as EngineStateEx)
+                ({ ...s, hintStep: 1, problemUsedHint: true } as EngineState)
             );
             if (!opts.learningMode) damagePlayerOnMiss();
           } else if (state.hintStep === 1) {
@@ -514,7 +514,7 @@ export function useTypingEngine(
                   hintStep: 2,
                   showHint: true,
                   problemUsedHint: true,
-                } as EngineStateEx)
+                } as EngineState)
             );
             if (!opts.learningMode) damagePlayerOnMiss();
           }
@@ -531,7 +531,7 @@ export function useTypingEngine(
                 ...s,
                 typed: s.typed.slice(0, -1),
                 correctMap: s.correctMap.slice(0, -1),
-              } as EngineStateEx)
+              } as EngineState)
           );
         }
         return;
@@ -556,11 +556,13 @@ export function useTypingEngine(
             hits: s.hits + (res.ok ? 1 : 0),
             errors: s.errors + (res.ok ? 0 : 1),
             problemHasMistake: s.problemHasMistake || !res.ok,
-          } as EngineStateEx)
+          } as EngineState)
       );
 
       // ミス時は即ダメージ（学習モードは無効）
-      if (!res.ok) damagePlayerOnMiss();
+      if (!res.ok) {
+        damagePlayerOnMiss();
+      }
 
       // 全文字正解 → 敵ダメージ → 次へ
       const willCompleteLen = cursor + 1 === state.answerEn.length;
@@ -582,7 +584,7 @@ export function useTypingEngine(
                 typed: "",
                 correctMap: [],
                 hintStep: 0,
-              } as EngineStateEx)
+              } as EngineState)
           );
           return;
         }
@@ -621,27 +623,27 @@ export function useTypingEngine(
       try {
         sfxSlashRef.current?.unload();
       } catch {
-        return;
+        /* ignore */
       }
       try {
         sfxPunchRef.current?.unload();
       } catch {
-        return;
+        /* ignore */
       }
       try {
         sfxDefeatRef.current?.unload();
       } catch {
-        return;
+        /* ignore */
       }
       try {
         sfxEscapeRef.current?.unload();
       } catch {
-        return;
+        /* ignore */
       }
       try {
         sfxFallDownRef.current?.unload();
       } catch {
-        return;
+        /* ignore */
       }
       sfxSlashRef.current = null;
       sfxPunchRef.current = null;
@@ -656,10 +658,10 @@ export function useTypingEngine(
     wpm,
     accuracy,
     start,
-    stop, // ← 逃げる含め統一API
+    stop, // ← 逃げる/手動停止/勝敗確定の統一API
     next,
     onKey,
-    setLearningPhase,
+    setLearningPhase, // ← Drawer から手動切替用
     actualTimeSec, // ← 唯一の時間指標
   };
 }
