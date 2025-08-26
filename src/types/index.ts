@@ -61,7 +61,11 @@ export type ResultsDialogProps = {
 // ============================
 // エンジン連携
 // ============================
-export type QAPair = { ja: string; en: string; img?: string };
+export interface QAPair {
+  ja: string;
+  en: string;
+  img?: string;
+}
 
 export type JudgeResult = { ok: boolean; expected: string; received: string };
 
@@ -81,31 +85,25 @@ export type SpeakOpts = {
  * 唯一のオプション型
  * - 経過時間のみ運用; 制限時間関連は含めない。
  */
-export type EngineOptions = {
-  /** 出題順のシード（省略時は現在時刻ベース） */
-  seed?: number;
-  /** タイマー更新間隔(ms) 既定=100ms */
+export interface EngineOptions {
   tickMs?: number;
-  /** 学習モード：最初からヒント表示＆コンボ対象外 */
-  learningMode?: boolean;
-  /** 学習→リコールの二段階を有効化 */
-  learnThenRecall?: boolean;
-  /** true=ランダム / false=並び順（既定 false） */
-  randomOrder?: boolean;
-  /** 文クリア時の敵ダメージ（未指定なら damagePerHit, さらに未指定なら 10） */
-  damagePerSentence?: number;
 
-  // バトル
-  battleMode?: boolean; // 既定: true
-  playerMaxHp?: number; // 既定: 100
-  enemyMaxHp?: number; // 既定: 100
-  damagePerHit?: number; // 既定: 10
-  damagePerMiss?: number; // 既定: 5
+  // battle
+  battleMode?: boolean;
+  playerMaxHp?: number;
+  enemyMaxHp?: number;
+  damagePerMiss?: number;
+  damagePerSentence?: number; // (damagePerHit 同等)
 
-  // サウンド
+  // sound master
+  sound?: boolean;
+
+  // bgm
   bgm?: boolean;
   bgmSrc?: string;
   bgmVolume?: number;
+
+  // sfx
   sfx?: boolean;
   sfxVolume?: number;
   sfxSlashSrc?: string;
@@ -113,59 +111,19 @@ export type EngineOptions = {
   sfxDefeatSrc?: string;
   sfxEscapeSrc?: string;
   sfxFallDownSrc?: string;
-  sound?: boolean;
-};
 
-/** 唯一のエンジン状態型 */
-export type EngineState = {
-  // ランタイム
-  started: boolean;
-  finished: boolean;
-  startAt?: number;
+  // learning
+  learningMode?: boolean;
+  learnThenRecall?: boolean;
 
-  // 出題
-  questionImg?: string;
-  questionJa: string;
-  answerEn: string;
-
-  // 入力状態
-  typed: string;
-  correctMap: boolean[];
-  showHint: boolean;
-
-  // 進行状況
-  index: number;
-  hits: number;
-  errors: number;
-
-  // 品質・ヒント
-  combo: number;
-  problemHasMistake: boolean;
-  problemUsedHint: boolean;
-
-  /** Tabヒント段階: 0=未使用,1=音声済,2=表示済 */
-  hintStep: 0 | 1 | 2;
-  /** 学習モード時の段階: study=学習, recall=リコール */
-  learningPhase: "study" | "recall";
-
-  // バトル用
-  playerHp: number;
-  enemyHp: number;
-  playerMaxHp: number;
-  enemyMaxHp: number;
-  /** true=勝利 / false=敗北 / undefined=未決 */
-  victory?: boolean;
-
-  // メタ
-  playCount: number;
-
-  // 集計（ダイアログ用）
-  usedHintCount: number; // ヒントを使った「問題」数
-  mistakeProblemCount: number; // 間違えがあった「問題」数
-};
+  // order
+  randomOrder?: boolean;
+  seed?: number;
+  damagePerHit?: number;
+}
 
 // EngineLike は useTypingEngine の返り値と同一にして型ズレを防止。
-import type { useTypingEngine } from "@/hooks/useTypingEngine";
+import type { useTypingEngine } from "@/hooks/typingEngine/useTypingEngine";
 export type EngineLike = ReturnType<typeof useTypingEngine>;
 
 // ============================
@@ -196,3 +154,76 @@ export type HowlerWithCtx = typeof Howler & { ctx?: AudioContext };
 export type Controls = ReturnType<typeof useAnimation>;
 
 export type MapPoint = { id: number; x: number; y: number; title: string };
+
+// src/hooks/engine/types.ts
+export type LearningPhase = "study" | "recall";
+
+/** 唯一のエンジン状態型 */
+export interface EngineState {
+  // lifecycle
+  started: boolean;
+  finished: boolean;
+  startAt?: number;
+  victory?: boolean;
+
+  // QA表示
+  index: number;
+  questionJa: string;
+  answerEn: string;
+  questionImg?: string;
+
+  // タイピング
+  typed: string;
+  correctMap: boolean[];
+  hits: number;
+  errors: number;
+
+  // 学習
+  showHint: boolean;
+  hintStep: 0 | 1 | 2;
+  learningPhase: LearningPhase;
+  problemHasMistake: boolean;
+  problemUsedHint: boolean;
+
+  // バトル
+  playerHp: number;
+  enemyHp: number;
+  playerMaxHp: number;
+  enemyMaxHp: number;
+
+  // メタ
+  combo: number;
+  playCount: number;
+  usedHintCount: number;
+  mistakeProblemCount: number;
+}
+
+export type Action =
+  | {
+      type: "START";
+      payload: {
+        now: number;
+        playerMaxHp: number;
+        enemyMaxHp: number;
+        learning: boolean;
+        playCount: number;
+      };
+    }
+  | { type: "STOP"; payload: { victory?: boolean } }
+  | { type: "FINISH"; payload: { victory: boolean } }
+  | {
+      type: "LOAD_PAIR";
+      payload: { index: number; pair: QAPair; learning: boolean };
+    }
+  | { type: "TYPE_CHAR"; payload: { key: string; ok: boolean } }
+  | { type: "BACKSPACE" }
+  | { type: "SET_PHASE"; payload: { phase: LearningPhase; showHint: boolean } }
+  | {
+      type: "SET_HINT_STEP";
+      payload: { step: 0 | 1 | 2; showHint?: boolean; markUsedHint?: boolean };
+    }
+  | { type: "MARK_USED_HINT" }
+  | { type: "SYNC_LEARNING_TOGGLE"; payload: { learning: boolean } }
+  | { type: "TALLY_QUESTION" }
+  | { type: "DAMAGE_PLAYER"; payload: { amount: number } }
+  | { type: "DAMAGE_ENEMY"; payload: { amount: number } };

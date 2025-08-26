@@ -4,7 +4,7 @@ import DamageMotion from "@/components/DamageMotion";
 import InputCapture from "@/components/InputCapture";
 import ResultsModalChakra from "@/components/ResultsDialogChakra";
 import SettingsDrawerChakra from "@/components/SettingsDrawerChakra";
-import { useTypingEngine } from "@/hooks/useTypingEngine";
+import { useTypingEngine } from "@/hooks/typingEngine/useTypingEngine";
 import type { QAPair, Settings } from "@/types/index";
 import {
   AspectRatio,
