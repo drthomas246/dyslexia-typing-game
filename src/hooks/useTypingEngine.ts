@@ -65,7 +65,7 @@ export function useTypingEngine(
       src: [bgmSrc],
       loop: true,
       volume: bgmVolume,
-      html5: true,
+      html5: false,
     });
     bgmRef.current = howl;
     howl.play();

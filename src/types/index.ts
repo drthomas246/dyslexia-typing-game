@@ -3,6 +3,7 @@ import type {
   Tooltip as ChakraTooltip,
   IconButtonProps,
 } from "@chakra-ui/react";
+import { useAnimation } from "framer-motion";
 import type { ThemeProviderProps } from "next-themes";
 
 // ============================
@@ -185,3 +186,13 @@ export type SettingsDrawerProps = {
   onChange: (s: Settings) => void;
   engine?: EngineLike; // 現在フェーズ表示と手動切替に使用（任意）
 };
+
+export type DecodableImage = HTMLImageElement & {
+  decode?: () => Promise<void>;
+};
+
+export type HowlerWithCtx = typeof Howler & { ctx?: AudioContext };
+
+export type Controls = ReturnType<typeof useAnimation>;
+
+export type MapPoint = { id: number; x: number; y: number; title: string };

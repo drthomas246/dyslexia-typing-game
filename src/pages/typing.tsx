@@ -23,9 +23,17 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
+export default function Typing({
+  QA,
+  title,
+  sound,
+}: {
+  QA: QAPair[];
+  title: string;
+  sound: boolean;
+}) {
   const [settings, setSettings] = useState<Settings>({
-    sound: true,
+    sound: sound,
     language: "ja",
     learningMode: true,
     learnThenRecall: true,
@@ -145,7 +153,7 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
   );
 
   if (page === "home" || QA === undefined) {
-    return <App />;
+    return <App played={false} sound={settings.sound} />;
   }
 
   return (
