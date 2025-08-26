@@ -48,7 +48,7 @@ export default function App({
 
   // BGM（シングルトン管理・冪等API）
   const { ensurePlaying, fadeOutStop } = useBgm(
-    "/music/mainTheme.mp3",
+    "./music/mainTheme.mp3",
     0.4 // ← 基準音量（初回も再訪もこの音量に収束）
   );
 
@@ -57,14 +57,14 @@ export default function App({
 
   // 効果音
   const { play: playSe } = useHowlerOneShot(
-    "/music/soundEffects/screenTransition.mp3",
+    "./music/soundEffects/screenTransition.mp3",
     1.0
   );
 
   // タイトル→4枚スライドの演出シーケンス
   const seq = useSequence({
     firstPlayed,
-    titleSrc: "/images/title.png",
+    titleSrc: "./images/title.png",
     onFinishFirst: () => setFirstPlayed(false),
   });
 
@@ -148,7 +148,7 @@ export default function App({
             />
           )}
 
-          <MapCanvas imgSrc="/images/map.png">
+          <MapCanvas imgSrc="./images/map.png">
             {points.map((p) => (
               <ClickPoint
                 key={p.id}
@@ -160,31 +160,31 @@ export default function App({
           {firstPlayed && (
             <>
               <TitleOverlay
-                src="/images/title.png"
+                src="./images/title.png"
                 visible={seq.title.visible}
                 animateCtrl={seq.title.ctrl}
               />
               <SlideOverlay
                 side="top"
-                src="/images/top.png"
+                src="./images/top.png"
                 visible={seq.top.visible}
                 animateCtrl={seq.top.ctrl}
               />
               <SlideOverlay
                 side="bottom"
-                src="/images/bottom.png"
+                src="./images/bottom.png"
                 visible={seq.bottom.visible}
                 animateCtrl={seq.bottom.ctrl}
               />
               <SlideOverlay
                 side="right"
-                src="/images/right.png"
+                src="./images/right.png"
                 visible={seq.right.visible}
                 animateCtrl={seq.right.ctrl}
               />
               <SlideOverlay
                 side="left"
-                src="/images/left.png"
+                src="./images/left.png"
                 visible={seq.left.visible}
                 animateCtrl={seq.left.ctrl}
               />
