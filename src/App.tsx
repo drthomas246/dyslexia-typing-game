@@ -48,7 +48,7 @@ export default function App({
 
   // BGM（シングルトン管理・冪等API）
   const { ensurePlaying, fadeOutStop } = useBgm(
-    "./music/mainTheme.mp3",
+    "./music/bgm/mainTheme.mp3",
     0.4 // ← 基準音量（初回も再訪もこの音量に収束）
   );
 

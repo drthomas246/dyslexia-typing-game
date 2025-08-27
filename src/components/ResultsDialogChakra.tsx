@@ -13,6 +13,7 @@ export default function ResultsDialogChakra({
   open,
   setOpen,
   onRetry,
+  setShouldBgmPlay,
   summary,
 }: ResultsDialogProps) {
   return (
@@ -64,7 +65,13 @@ export default function ResultsDialogChakra({
                 もう一度やる
               </Button>
               <Dialog.ActionTrigger asChild>
-                <Button variant="outline" onClick={() => setOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShouldBgmPlay(true);
+                    setOpen(false);
+                  }}
+                >
                   とじる
                 </Button>
               </Dialog.ActionTrigger>

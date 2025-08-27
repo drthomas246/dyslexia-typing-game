@@ -46,6 +46,7 @@ export type ResultsDialogProps = {
   open: boolean;
   setOpen: (v: boolean) => void;
   onRetry: () => void;
+  setShouldBgmPlay: React.Dispatch<React.SetStateAction<boolean>>;
   summary: {
     /** 実測プレイ時間（秒） */
     timeSec: number;
@@ -223,7 +224,10 @@ export type Action =
       payload: { step: 0 | 1 | 2; showHint?: boolean; markUsedHint?: boolean };
     }
   | { type: "MARK_USED_HINT" }
-  | { type: "SYNC_LEARNING_TOGGLE"; payload: { learning: boolean } }
+  | {
+      type: "SYNC_LEARNING_TOGGLE";
+      payload: { learning: boolean; learnThenRecall: boolean };
+    }
   | { type: "TALLY_QUESTION" }
   | { type: "DAMAGE_PLAYER"; payload: { amount: number } }
   | { type: "DAMAGE_ENEMY"; payload: { amount: number } };

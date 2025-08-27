@@ -132,11 +132,24 @@ export function reducer(s: EngineState, a: Action): EngineState {
     }
 
     case "SYNC_LEARNING_TOGGLE": {
-      const learning = a.payload.learning;
+      const { learning, learnThenRecall } = a.payload;
+
+      // 基本ポリシー：
+      // - learning=false -> showHint=false（ただし hintStep===2 なら表示維持）
+      // - learning=true かつ learnThenRecall=true -> phase が study のときだけ基本表示
+      // - learning=true かつ learnThenRecall=false -> 常に基本表示
+      const baseShow = learning
+        ? !learnThenRecall || s.learningPhase === "study"
+        : false;
+
+      // 段階ヒント2（Tab2回目）を出していれば、recall でも表示維持
+      const showHint = s.hintStep === 2 ? true : baseShow;
+
       return {
         ...s,
-        showHint: s.showHint || learning,
-        problemUsedHint: s.problemUsedHint || learning,
+        showHint,
+        // problemUsedHint は true のままに保つ（OR）
+        problemUsedHint: s.problemUsedHint || (showHint && s.hintStep === 2),
       };
     }
 

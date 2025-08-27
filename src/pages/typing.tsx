@@ -1,3 +1,4 @@
+// src/pages/typing.tsx
 import App from "@/App";
 import AnswerInputView from "@/components/AnswerInputView";
 import DamageMotion from "@/components/DamageMotion";
@@ -21,6 +22,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Howl } from "howler";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function Typing({
@@ -42,11 +44,8 @@ export default function Typing({
 
   // クリックごとに増やすと、key が変わってアニメがやり直される
   const [slashId, setSlashId] = useState(0);
-  // ダメージ用の状態
   const [hurtId, setHurtId] = useState(0);
-  // 一問正解で敵 -10
   const damagePerHit = useMemo(() => 10, []);
-  // 消える（モンスターのフェードアウト）
   const [vanishId, setVanishId] = useState(0);
   const [vanished, setVanished] = useState(false);
 
@@ -69,14 +68,15 @@ export default function Typing({
     setVanished
   );
 
-  // 敵の画像
+  // 敵画像
   const [ENEMY_IMG, setEnemyImg] = useState("");
   useEffect(() => {
     const EnemyList = ["slime", "goblin", "dragon"];
     const EMRandomNum = Math.floor(Math.random() * 3);
     setEnemyImg(`./images/monster/${EnemyList[EMRandomNum]}.png`);
   }, [engine.state.playCount]);
-  // 背景の画像
+
+  // 背景画像
   const [BACKGROUND_IMG, setBackgroundImg] = useState("");
   useEffect(() => {
     const BGRandomNum = Math.floor(Math.random() * 3);
@@ -88,7 +88,60 @@ export default function Typing({
   const [page, setPage] = useState<"home" | "typing">("typing");
   const arenaRef = useRef<HTMLDivElement | null>(null);
 
-  // 終了を検知して開く（Enterに依存しない）
+  // ====== BGM 管理（状態で一元制御） ======
+  const [shouldBgmPlay, setShouldBgmPlay] = useState(sound);
+  const bgmRef = useRef<Howl | null>(null);
+
+  useEffect(() => {
+    if (settings.sound) {
+      setShouldBgmPlay(true);
+    } else {
+      setShouldBgmPlay(false);
+    }
+  }, [settings.sound]);
+  // 「待機中に鳴らすべきか？」の真理値を一本化
+  useEffect(() => {
+    console.log("shouldBgmPlay", shouldBgmPlay);
+    if (shouldBgmPlay) {
+      // 既に生成済みで再生中なら何もしない
+      if (bgmRef.current && bgmRef.current.playing()) return;
+
+      // 未生成 or 停止済みなら作って再生
+      if (!bgmRef.current) {
+        bgmRef.current = new Howl({
+          src: ["./music/bgm/waitScreen.mp3"],
+          loop: true,
+          volume: 0.4,
+          html5: true,
+        });
+      }
+      try {
+        if (!bgmRef.current.playing()) {
+          bgmRef.current.play();
+        }
+      } catch {
+        /* ignore */
+      }
+    } else {
+      // 待機条件を満たさない場合は止める
+      if (bgmRef.current) {
+        try {
+          bgmRef.current.stop();
+          bgmRef.current.unload();
+        } catch {
+          /* ignore */
+        }
+        bgmRef.current = null;
+      }
+    }
+    // アンマウントでも確実に停止
+    return () => {
+      // ここでは何もしない（上の分岐で都度クリーンにする）
+    };
+  }, [shouldBgmPlay]);
+  // ====== /BGM 管理 ======
+
+  // 終了検知（結果ダイアログを開く）
   useEffect(() => {
     if (engine.state.started && engine.state.finished) {
       if (engine.state.enemyHp === 0) {
@@ -99,7 +152,7 @@ export default function Typing({
     }
   }, [engine.state.started, engine.state.finished, engine.state.enemyHp]);
 
-  // HP率（0〜100）
+  // HP率
   const enemyHpPct = useMemo(
     () => Math.round((engine.state.enemyHp / engine.state.enemyMaxHp) * 100),
     [engine.state.enemyHp, engine.state.enemyMaxHp]
@@ -108,6 +161,19 @@ export default function Typing({
     () => Math.round((engine.state.playerHp / engine.state.playerMaxHp) * 100),
     [engine.state.playerHp, engine.state.playerMaxHp]
   );
+
+  // Start（青ボタン）…即時ミュートしてから開始（重なり防止）
+  const handleStart = () => {
+    setShouldBgmPlay(false);
+    engine.start();
+  };
+
+  // Escape（赤ボタン）…停止だけ。再生は shouldBgmPlay の変化で自動
+  const handleEscape = () => {
+    engine.stop("escape");
+    // ※ここで play を呼ばない。shouldBgmPlay が true に変われば自動再生される
+  };
+
   const MonsterLayer = (
     <>
       <Image
@@ -137,7 +203,7 @@ export default function Typing({
               vanishId > 0
                 ? [0, -20, 20, -18, 18, -15, 15, -10, 10, -5, 5, 0]
                 : 0,
-            scale: vanishId > 0 ? 0.95 : 1, // 少し縮むとやられ感が出る
+            scale: vanishId > 0 ? 0.95 : 1,
           }}
           transition={{
             opacity: { duration: 1.2, ease: "easeOut", times: [0, 0.6, 1] },
@@ -169,11 +235,11 @@ export default function Typing({
               せってい
             </Button>
             {!engine.state.started || engine.state.finished ? (
-              <Button colorPalette="blue" onClick={engine.start}>
+              <Button colorPalette="blue" onClick={handleStart}>
                 {settings.learningMode ? "始める" : "バトル"}
               </Button>
             ) : (
-              <Button colorPalette="red" onClick={() => engine.stop("escape")}>
+              <Button colorPalette="red" onClick={handleEscape}>
                 {settings.learningMode ? "終わる" : "にげる"}
               </Button>
             )}
@@ -189,7 +255,6 @@ export default function Typing({
           h="calc(100vh - 293px)"
         >
           <HStack gap="4" h="calc(100vh - 367px)" mb="16px">
-            {/* 大きな敵スプライト（固定画像） */}
             <Box
               ref={arenaRef}
               mx="auto"
@@ -201,7 +266,6 @@ export default function Typing({
               bg="blackAlpha.50"
               position="relative"
             >
-              {/* 敵エリア全体を横揺れさせるラッパー */}
               <AnimatePresence>
                 {hurtId > 0 ? (
                   <motion.div
@@ -224,7 +288,6 @@ export default function Typing({
                   </Box>
                 )}
               </AnimatePresence>
-              {/* 斬撃エフェクト（クリックで再生） */}
               <DamageMotion
                 arenaRef={arenaRef!.current}
                 slashId={slashId}
@@ -232,7 +295,6 @@ export default function Typing({
               />
             </Box>
             <Box w="450px">
-              {/* 敵のセリフ（日本語） */}
               <Box rounded="lg" borderWidth="1px" p="3" bg="gray.subtle">
                 <Text fontSize={{ base: "lg", md: "xl" }} color="fg">
                   {engine.state.questionJa
@@ -243,7 +305,6 @@ export default function Typing({
                 </Text>
               </Box>
 
-              {/* QAの画像（ヒント用）。セリフの下に表示 */}
               <Box mt="16px">
                 <AspectRatio ratio={1 / 1} w="200px" mx="auto">
                   {engine.state.questionImg ? (
@@ -263,7 +324,7 @@ export default function Typing({
               </Box>
             </Box>
           </HStack>
-          {/* 敵HPバー（大きめ） */}
+
           <HStack gap="3" align="center">
             <Badge colorPalette="purple" variant="solid">
               てきのHP
@@ -283,7 +344,7 @@ export default function Typing({
           </HStack>
         </Box>
 
-        {/* 学習モードの段階表示（任意） */}
+        {/* 学習モードの段階表示 */}
         {settings.learningMode ? (
           settings.learnThenRecall ? (
             <HStack h="24px">
@@ -313,7 +374,6 @@ export default function Typing({
           )
         ) : null}
 
-        {/* 入力ビュー（英語で回答） */}
         <Box p="4" rounded="xl" borderWidth="1px" bg="bg.panel" h="109px">
           <AnswerInputView
             typed={engine.state.typed}
@@ -327,7 +387,6 @@ export default function Typing({
           </Text>
         </Box>
 
-        {/* 自分HPバー */}
         {!settings.learningMode && (
           <HStack gap="3" align="center" h="24px">
             <Badge colorPalette="blue" variant="solid">
@@ -348,7 +407,6 @@ export default function Typing({
           </HStack>
         )}
 
-        {/* 入力キャプチャ（ダイアログ表示中は無効） */}
         <InputCapture
           onKey={(ch, e) => {
             if (ch === "\n" && engine.state.started && !engine.state.finished) {
@@ -356,7 +414,7 @@ export default function Typing({
               engine.stop();
               return;
             }
-            engine.onKey(ch); // Tab/Space/Backspace/通常文字 すべてここで処理
+            engine.onKey(ch);
           }}
           enabled={
             engine.state.started && !engine.state.finished && !resultOpen
@@ -369,7 +427,6 @@ export default function Typing({
         onClose={settingsDisc.onClose}
         settings={settings}
         onChange={setSettings}
-        // エンジンを渡して Drawer 側から study/recall を手動切替可能に
         engine={engine}
       />
 
@@ -380,6 +437,7 @@ export default function Typing({
           setResultOpen(false);
           engine.start();
         }}
+        setShouldBgmPlay={setShouldBgmPlay}
         summary={{
           timeSec: engine.actualTimeSec,
           usedHintCount: engine.state.usedHintCount,

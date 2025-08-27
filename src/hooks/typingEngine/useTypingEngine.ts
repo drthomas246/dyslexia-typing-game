@@ -40,8 +40,6 @@ export function useTypingEngine(
 
   // ---- start ----
   const start = useCallback(() => {
-    playCountRef.current += 1;
-
     // 演出リセット
     setVanishId(0);
     setVanished(false);
@@ -94,6 +92,7 @@ export function useTypingEngine(
       if (reason === "victory") victory = true;
 
       dispatch({ type: "STOP", payload: { victory } });
+      playCountRef.current += 1;
     },
     [opts.learningMode, sound, state.victory]
   );
