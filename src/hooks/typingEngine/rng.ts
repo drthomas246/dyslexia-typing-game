@@ -1,4 +1,3 @@
-// src/hooks/engine/rng.ts
 /** 擬似乱数（mulberry32） */
 export function mulberry32(a: number) {
   return function () {

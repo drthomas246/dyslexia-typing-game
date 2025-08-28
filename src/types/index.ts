@@ -1,4 +1,3 @@
-// types/index.ts
 import type {
   Tooltip as ChakraTooltip,
   IconButtonProps,

@@ -1,4 +1,3 @@
-// src/hooks/engine/useTypingEngine.ts
 import { useSpeech } from "@/hooks/useSpeech";
 import { judgeChar } from "@/lib/judge"; // ← require禁止のためES import
 import type { EngineOptions, QAPair } from "@/types/index";
@@ -173,20 +172,8 @@ export function useTypingEngine(
     return Math.max(0, Math.floor((nowMs - state.startAt) / 1000));
   }, [state.started, state.startAt, nowMs]);
 
-  const wpm = useMemo(() => {
-    const elapsedMin = actualTimeSec / 60;
-    return elapsedMin > 0 ? state.hits / 5 / elapsedMin : 0;
-  }, [state.hits, actualTimeSec]);
-
-  const accuracy = useMemo(() => {
-    const total = state.hits + state.errors;
-    return total ? (state.hits / total) * 100 : 100;
-  }, [state.hits, state.errors]);
-
   return {
     state,
-    wpm,
-    accuracy,
     start,
     stop, // 逃げる/手動停止/勝敗確定の統一API
     next,

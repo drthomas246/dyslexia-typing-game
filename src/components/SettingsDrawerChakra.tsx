@@ -1,4 +1,3 @@
-// src/components/SettingsDrawerChakra.tsx
 import type { Settings, SettingsDrawerProps } from "@/types/index";
 import {
   Button,

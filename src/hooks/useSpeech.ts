@@ -1,4 +1,3 @@
-// src/lib/useSpeech.ts
 import type { SpeakOpts } from "@/types/index";
 import { useCallback, useEffect, useRef, useState } from "react";
 

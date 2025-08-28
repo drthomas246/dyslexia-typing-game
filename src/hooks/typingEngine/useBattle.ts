@@ -1,4 +1,3 @@
-// src/hooks/engine/useBattle.ts
 import type { Action, EngineOptions, EngineState } from "@/types/index";
 import { useCallback } from "react";
 import type { SoundCtl } from "./useSound";

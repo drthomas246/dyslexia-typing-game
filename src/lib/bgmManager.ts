@@ -1,4 +1,3 @@
-// src/lib/bgmManager.ts
 import { Howl, Howler } from "howler";
 
 type Listener = () => void;

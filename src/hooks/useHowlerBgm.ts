@@ -1,4 +1,3 @@
-// src/hooks/useHowlerBgm.ts（差し替え）
 import type { Howl } from "howler";
 import { Howler, Howl as HowlerHowl } from "howler";
 import { useCallback, useEffect, useRef } from "react";

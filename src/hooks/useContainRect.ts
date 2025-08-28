@@ -1,4 +1,3 @@
-// src/hooks/useContainRect.ts（修正版）
 import { useCallback, useEffect, useState, type RefObject } from "react";
 
 export type ContainRect = { x: number; y: number; w: number; h: number };

@@ -1,4 +1,3 @@
-// src/hooks/engine/useInput.ts
 import type {
   Action,
   EngineOptions,

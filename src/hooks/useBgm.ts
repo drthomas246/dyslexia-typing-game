@@ -1,4 +1,3 @@
-// src/hooks/useBgm.ts
 import * as BGM from "@/lib/bgmManager";
 import { useCallback, useEffect } from "react";
 

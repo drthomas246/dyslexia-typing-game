@@ -1,4 +1,3 @@
-// src/components/ResultsDialogChakra.tsx
 import type { ResultsDialogProps } from "@/types/index";
 import {
   Button,

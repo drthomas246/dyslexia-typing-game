@@ -1,4 +1,3 @@
-// src/hooks/engine/useSequence.ts
 import { shuffle } from "@/hooks/typingEngine/rng";
 import type { EngineOptions, QAPair } from "@/types/index";
 import { useCallback, useState } from "react";

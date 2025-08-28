@@ -1,4 +1,3 @@
-// src/components/map/MapCanvas.tsx（呼び出し側の型を合わせるだけ）
 import { useContainRect, type ContainRect } from "@/hooks/useContainRect";
 import { Box, Image } from "@chakra-ui/react";
 import {

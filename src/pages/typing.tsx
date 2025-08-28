@@ -1,4 +1,3 @@
-// src/pages/typing.tsx
 import App from "@/App";
 import AnswerInputView from "@/components/AnswerInputView";
 import DamageMotion from "@/components/DamageMotion";
@@ -228,7 +227,13 @@ export default function Typing({
         <HStack justify="space-between" h="40px">
           <Heading size="lg">タイピングゲーム ～{title}～</Heading>
           <HStack>
-            <Button onClick={() => setPage("home")} variant="outline">
+            <Button
+              onClick={() => {
+                setShouldBgmPlay(false);
+                setPage("home");
+              }}
+              variant="outline"
+            >
               もどる
             </Button>
             <Button onClick={settingsDisc.onOpen} variant="outline">

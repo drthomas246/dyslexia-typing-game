@@ -1,4 +1,3 @@
-// src/components/InputCapture.tsx
 import type { InputCaptureProps } from "@/types/index";
 import { useEffect } from "react";
 

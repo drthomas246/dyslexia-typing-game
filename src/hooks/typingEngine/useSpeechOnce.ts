@@ -1,4 +1,3 @@
-// src/hooks/engine/useSpeechOnce.ts
 import { useSpeech } from "@/hooks/useSpeech";
 import type { EngineOptions, EngineState } from "@/types/index";
 import { useEffect, useRef } from "react";

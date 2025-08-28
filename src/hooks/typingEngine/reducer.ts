@@ -1,4 +1,3 @@
-// src/hooks/engine/reducer.ts
 import type { Action, EngineOptions, EngineState } from "@/types/index";
 
 const clamp = (v: number, lo: number, hi: number) =>

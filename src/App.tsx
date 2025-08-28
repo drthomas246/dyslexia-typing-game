@@ -1,4 +1,3 @@
-// src/pages/App.tsx
 import { Box } from "@chakra-ui/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -14,10 +13,10 @@ import { useHowlerOneShot } from "@/hooks/useHowlerOneShot";
 import { useSequence } from "@/hooks/useSequence";
 import { useSpeech } from "@/hooks/useSpeech";
 
-import QA_MONTH from "@/lib/texts/qa_month";
-import QA_NUMBER from "@/lib/texts/qa_number";
-import QA_NUMBER11 from "@/lib/texts/qa_number11";
-import QA_WEEK from "@/lib/texts/qa_week";
+import QA_MONTH from "@/data/texts/qa_month";
+import QA_NUMBER from "@/data/texts/qa_number";
+import QA_NUMBER11 from "@/data/texts/qa_number11";
+import QA_WEEK from "@/data/texts/qa_week";
 import Typing from "@/pages/typing";
 import type { MapPoint } from "@/types/index";
 import { Howler } from "howler";
