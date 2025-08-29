@@ -1,3 +1,4 @@
+import type { DamageMotionProps } from "@/types/index";
 import { Box } from "@chakra-ui/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
@@ -6,11 +7,7 @@ export default function DamageMotion({
   arenaRef,
   slashId,
   hurtId,
-}: {
-  arenaRef: HTMLDivElement | null;
-  slashId: number;
-  hurtId: number;
-}) {
+}: DamageMotionProps) {
   const [travel, setTravel] = useState(400); // フォールバック距離
   useEffect(() => {
     if (!arenaRef) return;

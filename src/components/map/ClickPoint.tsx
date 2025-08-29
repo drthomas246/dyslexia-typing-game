@@ -1,17 +1,12 @@
 import { Tooltip } from "@/components/ui/tooltip";
-import type { ContainRect } from "@/hooks/useContainRect";
-import type { MapPoint } from "@/types/index";
+import type { ClickPointProps } from "@/types/index";
 import { Box } from "@chakra-ui/react";
 
 export function ClickPoint({
   point,
   containRect, // ← optional にする
   onClick,
-}: {
-  point: MapPoint;
-  containRect?: ContainRect; // ★ ここを optional
-  onClick: () => void;
-}) {
+}: ClickPointProps) {
   // rect が未注入/未計算なら描画しない
   if (!containRect || containRect.w === 0 || containRect.h === 0) return null;
 

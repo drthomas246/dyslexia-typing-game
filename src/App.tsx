@@ -17,8 +17,8 @@ import QA_MONTH from "@/data/texts/qa_month";
 import QA_NUMBER from "@/data/texts/qa_number";
 import QA_NUMBER11 from "@/data/texts/qa_number11";
 import QA_WEEK from "@/data/texts/qa_week";
-import Typing from "@/pages/typing";
-import type { MapPoint } from "@/types/index";
+import Typing from "@/pages/TypingPage";
+import type { AppProps, MapPoint } from "@/types/index";
 import { Howler } from "howler";
 
 function resumeHowlerContextIfNeeded() {
@@ -30,19 +30,13 @@ function resumeHowlerContextIfNeeded() {
   return Promise.resolve();
 }
 
-export default function App({
-  played = true,
-  sound = true,
-}: {
-  played?: boolean;
-  sound?: boolean;
-}) {
+export default function App({ played = true, sound = undefined }: AppProps) {
   // ページ状態
   const [page, setPage] = useState<number>(0);
 
   // 初回演出・BGM状態
   const [firstPlayed, setFirstPlayed] = useState<boolean>(played);
-  const [isBgmOn, setIsBgmOn] = useState<boolean>(sound);
+  const [isBgmOn, setIsBgmOn] = useState<boolean | undefined>(sound);
   const [consentOpen, setConsentOpen] = useState<boolean>(firstPlayed);
 
   // BGM（シングルトン管理・冪等API）
@@ -63,7 +57,7 @@ export default function App({
   // タイトル→4枚スライドの演出シーケンス
   const seq = useSequence({
     firstPlayed,
-    titleSrc: "./images/title.png",
+    titleSrc: "./images/title/title.png",
     onFinishFirst: () => setFirstPlayed(false),
   });
 
@@ -159,31 +153,31 @@ export default function App({
           {firstPlayed && (
             <>
               <TitleOverlay
-                src="./images/title.png"
+                src="./images/title/title.png"
                 visible={seq.title.visible}
                 animateCtrl={seq.title.ctrl}
               />
               <SlideOverlay
                 side="top"
-                src="./images/top.png"
+                src="./images/title/top.png"
                 visible={seq.top.visible}
                 animateCtrl={seq.top.ctrl}
               />
               <SlideOverlay
                 side="bottom"
-                src="./images/bottom.png"
+                src="./images/title/bottom.png"
                 visible={seq.bottom.visible}
                 animateCtrl={seq.bottom.ctrl}
               />
               <SlideOverlay
                 side="right"
-                src="./images/right.png"
+                src="./images/title/right.png"
                 visible={seq.right.visible}
                 animateCtrl={seq.right.ctrl}
               />
               <SlideOverlay
                 side="left"
-                src="./images/left.png"
+                src="./images/title/left.png"
                 visible={seq.left.visible}
                 animateCtrl={seq.left.ctrl}
               />

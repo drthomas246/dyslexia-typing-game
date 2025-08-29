@@ -1,20 +1,6 @@
-import type { EngineOptions } from "@/types/index";
+import type { EngineOptions, HowlOrNull, SoundCtl } from "@/types/index";
 import { Howl } from "howler";
 import { useCallback, useEffect, useRef } from "react";
-
-type HowlOrNull = Howl | null;
-
-export interface SoundCtl {
-  playBgm: () => void;
-  stopBgm: () => void;
-  sfx: {
-    slash: () => void;
-    punch: () => void;
-    defeat: () => void;
-    escape: () => void;
-    fallDown: () => void;
-  };
-}
 
 export function useSound(opts: EngineOptions): SoundCtl {
   const enabled = opts.sound ?? true;

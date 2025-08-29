@@ -1,21 +1,15 @@
+import type { SlideOverlayProps } from "@/types/index";
 import { Image } from "@chakra-ui/react";
-import { motion, useAnimation } from "framer-motion"; // ★ 型は useAnimation から作る
-const MotionImage = motion(Image);
+import { motion } from "framer-motion";
 
-// useAnimation の戻り値型を使ってコントロール型を定義
-type Controls = ReturnType<typeof useAnimation>;
+const MotionImage = motion(Image);
 
 export function SlideOverlay({
   side,
   src,
   visible,
   animateCtrl,
-}: {
-  side: "top" | "bottom" | "left" | "right";
-  src: string;
-  visible: boolean;
-  animateCtrl: Controls; // ★ ここを AnimationControls → Controls に
-}) {
+}: SlideOverlayProps) {
   if (!visible) return null;
   const zIndex =
     side === "top" ? 5 : side === "bottom" ? 4 : side === "right" ? 3 : 2;

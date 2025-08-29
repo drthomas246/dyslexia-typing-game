@@ -1,15 +1,15 @@
+import { initialState, reducer } from "@/hooks/typingEngine//reducer";
+import { useBattle } from "@/hooks/typingEngine//useBattle";
+import { useInput } from "@/hooks/typingEngine//useInput";
+import { useLearning } from "@/hooks/typingEngine//useLearning";
+import { useSequence } from "@/hooks/typingEngine//useSequence";
+import { useSound } from "@/hooks/typingEngine//useSound";
+import { useSpeechOnce } from "@/hooks/typingEngine//useSpeechOnce";
+import { useTimer } from "@/hooks/typingEngine//useTimer";
 import { useSpeech } from "@/hooks/useSpeech";
-import { judgeChar } from "@/lib/judge"; // ← require禁止のためES import
+import { judgeChar } from "@/lib/judge";
 import type { EngineOptions, QAPair } from "@/types/index";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
-import { initialState, reducer } from "./reducer";
-import { useBattle } from "./useBattle";
-import { useInput } from "./useInput";
-import { useLearning } from "./useLearning";
-import { useSequence } from "./useSequence";
-import { useSound } from "./useSound";
-import { useSpeechOnce } from "./useSpeechOnce";
-import { useTimer } from "./useTimer";
 
 export function useTypingEngine(
   opts: EngineOptions,

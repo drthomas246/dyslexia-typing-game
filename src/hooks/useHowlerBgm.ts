@@ -1,18 +1,17 @@
+import type { useHowlerBgmOpts } from "@/types/index";
 import type { Howl } from "howler";
 import { Howler, Howl as HowlerHowl } from "howler";
 import { useCallback, useEffect, useRef } from "react";
-
-type Opts = {
-  src: string;
-  defaultVolume?: number; // 基準音量
-  loop?: boolean;
-};
 
 function clamp01(v: number) {
   return Math.max(0, Math.min(1, v));
 }
 
-export function useHowlerBgm({ src, defaultVolume = 0.5, loop = true }: Opts) {
+export function useHowlerBgm({
+  src,
+  defaultVolume = 0.5,
+  loop = true,
+}: useHowlerBgmOpts) {
   const howlRef = useRef<Howl | null>(null);
   const targetRef = useRef(clamp01(defaultVolume)); // 基準音量
   const fadingRef = useRef(false);

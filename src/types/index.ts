@@ -4,6 +4,7 @@ import type {
 } from "@chakra-ui/react";
 import { useAnimation } from "framer-motion";
 import type { ThemeProviderProps } from "next-themes";
+// import type {useTypingEngine} from "@/hooks/typingEngine/useTypingEngine";
 
 // ============================
 // UI 共通系
@@ -45,7 +46,8 @@ export type ResultsDialogProps = {
   open: boolean;
   setOpen: (v: boolean) => void;
   onRetry: () => void;
-  setShouldBgmPlay: React.Dispatch<React.SetStateAction<boolean>>;
+  setShouldBgmPlay: React.Dispatch<React.SetStateAction<boolean | undefined>>;
+  sound: boolean | undefined;
   summary: {
     /** 実測プレイ時間（秒） */
     timeSec: number;
@@ -130,7 +132,7 @@ export type EngineLike = ReturnType<typeof useTypingEngine>;
 // 設定
 // ============================
 export type Settings = {
-  sound: boolean; // 効果音
+  sound: boolean | undefined; // 効果音
   language: string; // "en" | "ja" | ...
   learningMode: boolean; // 学習モード（常時ヒント）
   learnThenRecall: boolean; // 学習→リコールの2段階
@@ -230,3 +232,161 @@ export type Action =
   | { type: "TALLY_QUESTION" }
   | { type: "DAMAGE_PLAYER"; payload: { amount: number } }
   | { type: "DAMAGE_ENEMY"; payload: { amount: number } };
+
+export type BattleArenaProps = {
+  ref: React.RefObject<HTMLDivElement | null>;
+  enemyImg: string;
+  backgroundImg: string;
+  hurtId: number;
+  vanishId: number;
+  vanished: boolean;
+  onVanishDone: () => void;
+  slashId: number;
+  children?: React.ReactNode; // DamageMotion レイヤなど
+  questionText: string;
+  questionImg: string | undefined;
+  state: EngineState;
+  enemyHpPct: number;
+  arenaRef: HTMLDivElement | null;
+};
+
+export type HeaderControlsProps = {
+  learningMode: boolean;
+  started: boolean;
+  finished: boolean;
+  onStart: () => void;
+  onEscape: () => void;
+  onOpenSettings: () => void;
+  onBack: () => void;
+};
+
+export type PhaseNoticeProps = {
+  learningMode: boolean;
+  learnThenRecall: boolean;
+  phase?: "study" | "recall";
+};
+
+export type PlayerHpBarProps = {
+  current: number;
+  max: number;
+  pct: number;
+};
+
+export type ContainRect = { x: number; y: number; w: number; h: number };
+
+export type ClickPointProps = {
+  point: MapPoint;
+  containRect?: ContainRect; // ★ ここを optional
+  onClick: () => void;
+};
+
+export type AnswerPanelProps = {
+  typed: string;
+  correctMap: boolean[];
+  answer: string;
+  showHint: boolean;
+  state: EngineState;
+  inputOnKey: (key: string) => void;
+  resultOpen: boolean;
+};
+
+export type AnswerInputViewProps = {
+  typed: string;
+  correctMap: boolean[];
+  answer: string;
+  showHint: boolean;
+};
+
+export type DamageMotionProps = {
+  arenaRef: HTMLDivElement | null;
+  slashId: number;
+  hurtId: number;
+};
+
+export type EnemyHpBarProps = {
+  current: number;
+  max: number;
+  pct: number;
+};
+
+export type EnemyLayerProps = {
+  backgroundImg: string;
+  enemyImg: string;
+  vanishId: number;
+  vanished: boolean;
+  onVanishDone: () => void;
+};
+
+export type QuestionPanelProps = {
+  questionText: string;
+  questionImg?: string | null;
+};
+
+export type TitleOverlayProps = {
+  src: string;
+  visible: boolean;
+  animateCtrl: Controls; // ← 差し替え
+};
+
+export type SlideOverlayProps = {
+  side: "top" | "bottom" | "left" | "right";
+  src: string;
+  visible: boolean;
+  animateCtrl: Controls; // ★ ここを AnimationControls → Controls に
+};
+
+export type JudgeFn = (
+  answer: string,
+  cursor: number,
+  key: string
+) => { ok: boolean };
+
+export type HowlOrNull = Howl | null;
+
+export type SoundCtl = {
+  playBgm: () => void;
+  stopBgm: () => void;
+  sfx: {
+    slash: () => void;
+    punch: () => void;
+    defeat: () => void;
+    escape: () => void;
+    fallDown: () => void;
+  };
+};
+
+export type useHowlerBgmOpts = {
+  src: string;
+  defaultVolume?: number; // 基準音量
+  loop?: boolean;
+};
+
+export type useSequenceVisuals = {
+  title: boolean;
+  top: boolean;
+  bottom: boolean;
+  right: boolean;
+  left: boolean;
+};
+
+export type TypingPageProps = {
+  QA: QAPair[];
+  title: string;
+  sound: boolean | undefined;
+};
+
+export type AppProps = {
+  played?: boolean;
+  sound?: boolean;
+};
+
+export type HeaderAreaProps = {
+  setPage: React.Dispatch<React.SetStateAction<"home" | "typing">>;
+  title: string;
+  start: () => void;
+  stop: (reason?: "escape" | "user" | "dead" | "victory") => void;
+  state: EngineState;
+  setShouldPlay: React.Dispatch<React.SetStateAction<boolean | undefined>>;
+  settings: Settings;
+  onOpen: () => void;
+};

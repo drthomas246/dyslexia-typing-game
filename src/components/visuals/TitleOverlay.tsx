@@ -1,19 +1,10 @@
+import type { TitleOverlayProps } from "@/types/index";
 import { Image } from "@chakra-ui/react";
-import { motion, useAnimation } from "framer-motion";
+import { motion } from "framer-motion";
+
 const MotionImage = motion(Image);
 
-// 型は useAnimation の戻り値から
-type Controls = ReturnType<typeof useAnimation>;
-
-export function TitleOverlay({
-  src,
-  visible,
-  animateCtrl,
-}: {
-  src: string;
-  visible: boolean;
-  animateCtrl: Controls; // ← 差し替え
-}) {
+export function TitleOverlay({ src, visible, animateCtrl }: TitleOverlayProps) {
   if (!visible) return null;
 
   return (

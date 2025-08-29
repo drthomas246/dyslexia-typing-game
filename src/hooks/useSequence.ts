@@ -1,16 +1,8 @@
 import { nextFrame, sleep } from "@/lib/nextFrame";
 import { preloadImage } from "@/lib/preloadImage";
-import type { Controls } from "@/types/index";
+import type { Controls, useSequenceVisuals } from "@/types/index";
 import { useAnimation } from "framer-motion";
 import { useCallback, useState } from "react";
-
-type Vis = {
-  title: boolean;
-  top: boolean;
-  bottom: boolean;
-  right: boolean;
-  left: boolean;
-};
 
 export function useSequence(opts: {
   firstPlayed: boolean;
@@ -23,7 +15,7 @@ export function useSequence(opts: {
   const rightCtrl = useAnimation();
   const leftCtrl = useAnimation();
 
-  const [vis, setVis] = useState<Vis>({
+  const [vis, setVis] = useState<useSequenceVisuals>({
     title: true,
     top: true,
     bottom: true,

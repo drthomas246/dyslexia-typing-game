@@ -2,11 +2,10 @@ import type {
   Action,
   EngineOptions,
   EngineState,
+  JudgeFn,
   LearningPhase,
 } from "@/types/index";
 import { useCallback } from "react";
-
-type JudgeFn = (answer: string, cursor: number, key: string) => { ok: boolean };
 
 export function useInput(params: {
   state: EngineState;

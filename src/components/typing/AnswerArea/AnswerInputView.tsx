@@ -1,26 +1,12 @@
+import type { AnswerInputViewProps } from "@/types/index";
 import { Box } from "@chakra-ui/react";
 
-/**
- * typed と correctMap を元に色分けして表示
- * - ヒントOFF:
- *   - 直近（末尾）の正解: 青 / 不正解: 赤
- *   - それ以前: 正解=黒 / 不正解=赤
- * - ヒントON:
- *   - 入力済みの直近: 正解=青 / 不正解=赤
- *   - 入力済みのそれ以前: 正解=黒 / 不正解=赤
- *   - 未入力: 答えを灰色ゴースト表示
- */
 export default function AnswerInputView({
   typed,
   correctMap,
   answer,
   showHint,
-}: {
-  typed: string;
-  correctMap: boolean[];
-  answer: string;
-  showHint: boolean;
-}) {
+}: AnswerInputViewProps) {
   const last = typed.length - 1;
   const displayChars = showHint ? answer.split("") : typed.split("");
 

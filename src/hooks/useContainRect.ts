@@ -1,6 +1,5 @@
+import type { ContainRect } from "@/types/index";
 import { useCallback, useEffect, useState, type RefObject } from "react";
-
-export type ContainRect = { x: number; y: number; w: number; h: number };
 
 export function useContainRect(
   imgRef: RefObject<HTMLImageElement | null>,

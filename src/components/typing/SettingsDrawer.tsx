@@ -95,7 +95,7 @@ export default function SettingsDrawerChakra({
                 </Field.Root>
 
                 {/* 効果音 */}
-                <Field.Root disabled={settings.learningMode}>
+                <Field.Root>
                   <Field.Label>こうか音</Field.Label>
                   <Switch.Root
                     checked={settings.sound}

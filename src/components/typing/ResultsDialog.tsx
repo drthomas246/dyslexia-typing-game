@@ -13,6 +13,7 @@ export default function ResultsDialogChakra({
   setOpen,
   onRetry,
   setShouldBgmPlay,
+  sound,
   summary,
 }: ResultsDialogProps) {
   return (
@@ -21,6 +22,12 @@ export default function ResultsDialogChakra({
       onOpenChange={(e) => setOpen(e.open)}
       size="sm"
       placement="center"
+      onExitComplete={() => {
+        if (sound) {
+          setShouldBgmPlay(true);
+        }
+        setOpen(false);
+      }}
     >
       <Portal>
         <Dialog.Backdrop />
@@ -64,15 +71,7 @@ export default function ResultsDialogChakra({
                 もう一度やる
               </Button>
               <Dialog.ActionTrigger asChild>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShouldBgmPlay(true);
-                    setOpen(false);
-                  }}
-                >
-                  とじる
-                </Button>
+                <Button variant="outline">とじる</Button>
               </Dialog.ActionTrigger>
             </Dialog.Footer>
           </Dialog.Content>
