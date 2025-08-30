@@ -276,7 +276,8 @@ export type ContainRect = { x: number; y: number; w: number; h: number };
 
 export type ClickPointProps = {
   point: MapPoint;
-  containRect?: ContainRect; // ★ ここを optional
+  containRect?: ContainRect;
+  showTooltip: boolean;
   onClick: () => void;
 };
 

@@ -41,54 +41,59 @@ export function useSequence(opts: {
     ]);
   }, [titleCtrl, topCtrl, bottomCtrl, rightCtrl, leftCtrl]);
 
-  const start = useCallback(async () => {
-    await reset();
-    if (!opts.firstPlayed) return;
+  const start = useCallback(
+    async (setShowTooltip: React.Dispatch<React.SetStateAction<boolean>>) => {
+      await reset();
+      if (!opts.firstPlayed) return;
 
-    await preloadImage(opts.titleSrc);
-    await nextFrame();
+      await preloadImage(opts.titleSrc);
+      await nextFrame();
 
-    await titleCtrl.start({
-      scale: 1,
-      opacity: 1,
-      transition: { duration: 0.9, ease: "easeOut" },
-    });
+      await titleCtrl.start({
+        scale: 1,
+        opacity: 1,
+        transition: { duration: 0.9, ease: "easeOut" },
+      });
 
-    await sleep(2000);
+      await sleep(2000);
 
-    await titleCtrl.start({
-      opacity: 0,
-      transition: { duration: 0.8, ease: "easeInOut" },
-    });
-    await titleCtrl.set({ display: "none" });
-    setVis((v) => ({ ...v, title: false }));
+      await titleCtrl.start({
+        opacity: 0,
+        transition: { duration: 0.8, ease: "easeInOut" },
+      });
+      await titleCtrl.set({ display: "none" });
+      setVis((v) => ({ ...v, title: false }));
 
-    await topCtrl.start({
-      y: "-100%",
-      transition: { duration: 1.5, ease: "easeInOut" },
-    });
-    setVis((v) => ({ ...v, top: false }));
+      await topCtrl.start({
+        y: "-100%",
+        transition: { duration: 1.5, ease: "easeInOut" },
+      });
+      setVis((v) => ({ ...v, top: false }));
 
-    await bottomCtrl.start({
-      y: "100%",
-      transition: { duration: 1.0, ease: "easeInOut" },
-    });
-    setVis((v) => ({ ...v, bottom: false }));
+      await bottomCtrl.start({
+        y: "100%",
+        transition: { duration: 1.0, ease: "easeInOut" },
+      });
+      setVis((v) => ({ ...v, bottom: false }));
 
-    await rightCtrl.start({
-      x: "100%",
-      transition: { duration: 1.0, ease: "easeInOut" },
-    });
-    setVis((v) => ({ ...v, right: false }));
+      await rightCtrl.start({
+        x: "100%",
+        transition: { duration: 1.0, ease: "easeInOut" },
+      });
+      setVis((v) => ({ ...v, right: false }));
 
-    await leftCtrl.start({
-      x: "-100%",
-      transition: { duration: 1.0, ease: "easeInOut" },
-    });
-    setVis((v) => ({ ...v, left: false }));
+      await leftCtrl.start({
+        x: "-100%",
+        transition: { duration: 1.0, ease: "easeInOut" },
+      });
+      setVis((v) => ({ ...v, left: false }));
 
-    opts.onFinishFirst();
-  }, [opts, reset, titleCtrl, topCtrl, bottomCtrl, rightCtrl, leftCtrl]);
+      setShowTooltip(true);
+
+      opts.onFinishFirst();
+    },
+    [opts, reset, titleCtrl, topCtrl, bottomCtrl, rightCtrl, leftCtrl]
+  );
 
   return {
     title: { visible: vis.title, ctrl: titleCtrl as Controls },

@@ -20,6 +20,7 @@ import QA_WEEK from "@/data/texts/qa_week";
 import Typing from "@/pages/TypingPage";
 import type { AppProps, MapPoint } from "@/types/index";
 import { Howler } from "howler";
+import { Title } from "./components/map/Title";
 
 function resumeHowlerContextIfNeeded() {
   const h = Howler as unknown as { ctx?: AudioContext };
@@ -38,6 +39,9 @@ export default function App({ played = true, sound = undefined }: AppProps) {
   const [firstPlayed, setFirstPlayed] = useState<boolean>(played);
   const [isBgmOn, setIsBgmOn] = useState<boolean | undefined>(sound);
   const [consentOpen, setConsentOpen] = useState<boolean>(firstPlayed);
+  const [showTooltip, setShowTooltip] = useState<boolean>(
+    played ? false : true
+  );
 
   // BGM（シングルトン管理・冪等API）
   const { ensurePlaying, fadeOutStop } = useBgm(
@@ -90,13 +94,13 @@ export default function App({ played = true, sound = undefined }: AppProps) {
     setConsentOpen(false);
     setIsBgmOn(true);
     ensurePlaying(800);
-    seq.start();
+    seq.start(setShowTooltip);
   }, [ensurePlaying, seq]);
 
   const handleConsentNo = useCallback(() => {
     setConsentOpen(false);
     setIsBgmOn(false);
-    seq.start();
+    seq.start(setShowTooltip);
   }, [seq]);
 
   // クリックポイント選択時
@@ -147,9 +151,11 @@ export default function App({ played = true, sound = undefined }: AppProps) {
                 key={p.id}
                 point={p}
                 onClick={() => onSelectPoint(p.id)}
+                showTooltip={showTooltip}
               />
             ))}
           </MapCanvas>
+          <Title />
           {firstPlayed && (
             <>
               <TitleOverlay

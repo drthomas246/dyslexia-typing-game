@@ -1,5 +1,9 @@
-import type { SoundCtl } from "@/hooks/typingEngine/useSound";
-import type { Action, EngineOptions, EngineState } from "@/types/index";
+import type {
+  Action,
+  EngineOptions,
+  EngineState,
+  SoundCtl,
+} from "@/types/index";
 import { useCallback } from "react";
 
 export function useBattle(

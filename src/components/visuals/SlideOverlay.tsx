@@ -12,7 +12,7 @@ export function SlideOverlay({
 }: SlideOverlayProps) {
   if (!visible) return null;
   const zIndex =
-    side === "top" ? 5 : side === "bottom" ? 4 : side === "right" ? 3 : 2;
+    side === "top" ? 50 : side === "bottom" ? 40 : side === "right" ? 30 : 20;
 
   return (
     <MotionImage

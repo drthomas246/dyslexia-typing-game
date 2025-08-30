@@ -4,7 +4,8 @@ import { Box } from "@chakra-ui/react";
 
 export function ClickPoint({
   point,
-  containRect, // ← optional にする
+  containRect,
+  showTooltip,
   onClick,
 }: ClickPointProps) {
   // rect が未注入/未計算なら描画しない
@@ -24,6 +25,7 @@ export function ClickPoint({
       openDelay={120}
       closeDelay={80}
       contentProps={{ css: { "--tooltip-bg": "tomato" } }}
+      open={showTooltip}
     >
       <Box
         pos="absolute"

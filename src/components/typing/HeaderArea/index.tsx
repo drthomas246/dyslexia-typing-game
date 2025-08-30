@@ -1,6 +1,6 @@
 import HeaderControls from "@/components/typing/HeaderArea/HeaderControls";
 import type { HeaderAreaProps } from "@/types/index";
-import { HStack, Heading } from "@chakra-ui/react";
+import { HStack, Heading, Text } from "@chakra-ui/react";
 
 export default function HeaderArea({
   setPage,
@@ -22,7 +22,27 @@ export default function HeaderArea({
   };
   return (
     <HStack justify="space-between" h="40px">
-      <Heading size="lg">タイピングゲーム ～{title}～</Heading>
+      <Heading size="lg">
+        {/* ことば：#1E90FF */}
+        <Text as="span" color="#1E90FF">
+          ことば
+        </Text>
+        の
+        {/* 魔王：#E60033 + 黒縁（WebKit）/ Firefoxフォールバックにtext-shadow */}
+        <Text as="span" color="#E60033" fontWeight="bold">
+          魔王
+        </Text>
+        と{/* えいご：#228B22 */}
+        <Text as="span" color="#228B22">
+          えいご
+        </Text>
+        の
+        {/* 勇者：#FFD700 + 上側だけ白ハイライト（グラデーションを文字にクリップ） */}
+        <Text as="span" color="#FFD700">
+          勇者
+        </Text>{" "}
+        ～{title}～
+      </Heading>
       <HeaderControls
         learningMode={settings.learningMode}
         started={state.started}

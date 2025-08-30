@@ -1,4 +1,5 @@
-import { useContainRect, type ContainRect } from "@/hooks/useContainRect";
+import { useContainRect } from "@/hooks/useContainRect";
+import type { ContainRect } from "@/types/index";
 import { Box, Image } from "@chakra-ui/react";
 import {
   Children,

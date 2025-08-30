@@ -16,7 +16,7 @@ export function TitleOverlay({ src, visible, animateCtrl }: TitleOverlayProps) {
       w="100%"
       h="100%"
       objectFit="contain"
-      zIndex={6}
+      zIndex={60}
       animate={animateCtrl}
       initial={{ scale: 0, opacity: 0, display: "block" }}
       pointerEvents="none"
