@@ -1,9 +1,9 @@
+import QA_MONTH from "@/data/texts/qa_month";
+import QA_NUMBER from "@/data/texts/qa_number";
+import QA_NUMBER11 from "@/data/texts/qa_number11";
+import QA_TEST from "@/data/texts/qa_test";
+import QA_WEEK from "@/data/texts/qa_week";
 import { useSpeech } from "@/hooks/useSpeech";
-import QA_MONTH from "@/lib/texts/qa_month";
-import QA_NUMBER from "@/lib/texts/qa_number";
-import QA_NUMBER11 from "@/lib/texts/qa_number11";
-import QA_TEST from "@/lib/texts/qa_test";
-import QA_WEEK from "@/lib/texts/qa_week";
 import { Button, Container, Heading, HStack, Stack } from "@chakra-ui/react";
 import { useState } from "react";
 import Typing from "./pages/typing";
