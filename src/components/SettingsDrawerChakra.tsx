@@ -40,33 +40,6 @@ export default function SettingsDrawerChakra({
             </Drawer.Header>
             <Drawer.Body>
               <Stack gap="6">
-                <Field.Root>
-                  <Field.Label>じゅん番</Field.Label>
-                  <RadioGroup.Root
-                    value={settings.orderMode}
-                    onValueChange={(e) =>
-                      set({ orderMode: e.value as "random" | "sequential" })
-                    }
-                  >
-                    <HStack gap="6">
-                      <RadioGroup.Item value="random">
-                        <RadioGroup.ItemHiddenInput />
-                        <RadioGroup.ItemIndicator />
-                        <RadioGroup.ItemText>ばらばら</RadioGroup.ItemText>
-                      </RadioGroup.Item>
-                      <RadioGroup.Item value="sequential">
-                        <RadioGroup.ItemHiddenInput />
-                        <RadioGroup.ItemIndicator />
-                        <RadioGroup.ItemText>ならびじゅん</RadioGroup.ItemText>
-                      </RadioGroup.Item>
-                    </HStack>
-                  </RadioGroup.Root>
-                  <Field.HelperText>
-                    ばらばらは じゅん番を入れかえます。ならびじゅんは
-                    じゅん番通りです。
-                  </Field.HelperText>
-                </Field.Root>
-
                 {/* 学習モード */}
                 <Field.Root>
                   <Field.Label>遊び方</Field.Label>
@@ -91,6 +64,32 @@ export default function SettingsDrawerChakra({
                   </RadioGroup.Root>
                   <Field.HelperText>
                     練習は答えがあるので、それを打ちます。テストは答えがないので自分で思い出して打ちます。
+                  </Field.HelperText>
+                </Field.Root>
+                <Field.Root>
+                  <Field.Label>じゅん番</Field.Label>
+                  <RadioGroup.Root
+                    value={settings.orderMode}
+                    onValueChange={(e) =>
+                      set({ orderMode: e.value as "random" | "sequential" })
+                    }
+                  >
+                    <HStack gap="6">
+                      <RadioGroup.Item value="random">
+                        <RadioGroup.ItemHiddenInput />
+                        <RadioGroup.ItemIndicator />
+                        <RadioGroup.ItemText>ばらばら</RadioGroup.ItemText>
+                      </RadioGroup.Item>
+                      <RadioGroup.Item value="sequential">
+                        <RadioGroup.ItemHiddenInput />
+                        <RadioGroup.ItemIndicator />
+                        <RadioGroup.ItemText>ならびじゅん</RadioGroup.ItemText>
+                      </RadioGroup.Item>
+                    </HStack>
+                  </RadioGroup.Root>
+                  <Field.HelperText>
+                    ばらばらは じゅん番を入れかえます。ならびじゅんは
+                    じゅん番通りです。
                   </Field.HelperText>
                 </Field.Root>
 

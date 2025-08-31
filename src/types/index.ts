@@ -127,3 +127,11 @@ export type EngineState = {
 export type QAPair = { ja: string; en: string; img?: string };
 
 export type JudgeResult = { ok: boolean; expected: string; received: string };
+
+export type MapPoint = {
+  id: number;
+  x: number;
+  y: number;
+  title: string;
+  QA: QAPair[];
+};

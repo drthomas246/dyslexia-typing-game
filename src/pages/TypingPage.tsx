@@ -22,7 +22,14 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
+export default function Typing({
+  QA,
+  title,
+}: {
+  QA: QAPair[];
+  title: string;
+  sound?: boolean;
+}) {
   const [settings, setSettings] = useState<Settings>({
     durationSec: 60,
     sound: true,
@@ -170,24 +177,27 @@ export default function Typing({ QA, title }: { QA: QAPair[]; title: string }) {
             showHint={engine.state.showHint}
           />
           <Text mt="3" fontSize="sm" color="fg.muted">
-            スペースキー: 次のたん語 / エンターキー: とじる /
+            スペースキー: 次のたん語 / エンターキー: 始める、終わる /
             バックスペースキー: 1文字消す / タブキー: ヒント
           </Text>
         </Box>
 
         {/* 入力キャプチャ（ダイアログ表示中は無効） */}
         <InputCapture
+          enabled={!engine.state.finished && !resultOpen}
           onKey={(ch, e) => {
-            if (ch === "\n" && engine.state.started && !engine.state.finished) {
+            if (ch === "\n") {
               e.preventDefault();
-              engine.stop();
-              return;
+              if (!engine.state.started) {
+                engine.start();
+                return;
+              } else if (!engine.state.finished) {
+                engine.stop();
+                return;
+              }
+              engine.onKey(ch); // Tab/Space/Backspace/通常文字 すべてここで処理
             }
-            engine.onKey(ch); // Tab/Space/Backspace/通常文字 すべてここで処理
           }}
-          enabled={
-            engine.state.started && !engine.state.finished && !resultOpen
-          }
         />
       </Stack>
 
