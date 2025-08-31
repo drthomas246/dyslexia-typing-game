@@ -195,8 +195,8 @@ export default function Typing({
                 engine.stop();
                 return;
               }
-              engine.onKey(ch); // Tab/Space/Backspace/通常文字 すべてここで処理
             }
+            engine.onKey(ch); // Tab/Space/Backspace/通常文字 すべてここで処理
           }}
         />
       </Stack>
