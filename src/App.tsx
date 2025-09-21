@@ -26,7 +26,7 @@ export default function App() {
   };
   const titleData = (page: number) => {
     if (page === 999999) {
-      return "間違えた問題";
+      return "まちがえた問題";
     } else {
       return TYPING_ROUTE_POINTS[page - 1].title;
     }
@@ -66,7 +66,11 @@ export default function App() {
           </Stack>
         </Container>
       ) : (
-        <Typing QA={qaData(page)} title={titleData(page)} />
+        <Typing
+          QA={qaData(page)}
+          title={titleData(page)}
+          makingProblem={page === 999999 ? true : false}
+        />
       )}
     </>
   );

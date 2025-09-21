@@ -3,7 +3,10 @@ import { useSpeech } from "@/hooks/useSpeech";
 import { judgeChar } from "@/lib/judge";
 import type { EngineOptions, EngineState, QAPair } from "@/types/index";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { appendMakingProblems } from "@/repositories/appStateRepository";
+import {
+  appendMakingProblems,
+  removeMakingProblem,
+} from "@/repositories/appStateRepository";
 
 function mulberry32(a: number) {
   return function () {
@@ -18,7 +21,11 @@ function shuffle<T>(arr: T[], seed: number) {
   return [...arr].sort(() => rng() - 0.5);
 }
 
-export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
+export function useTypingEngine(
+  opts: EngineOptions,
+  QA: QAPair[],
+  makingProblem: boolean,
+) {
   const tickMs = Math.max(16, opts.tickMs ?? 100);
   const { speak } = useSpeech();
 
@@ -357,11 +364,26 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
           }));
           return;
         }
+        // テスト（learningMode=false）で正解したら削除
+        if (!opts.learningMode && makingProblem) {
+          const pairIndex = order[state.index] ?? 0;
+          const pair: QAPair = QA[pairIndex] ?? QA[0];
+          void removeMakingProblem(pair); // 書き捨てでOK（失敗してもゲーム継続）
+        }
         // 自動で次の問題へ（重複は Set で抑止）
         setTimeout(next, 0);
       }
     },
-    [state, next, opts.learningMode, opts.learnThenRecall, speak],
+    [
+      state,
+      next,
+      opts.learningMode,
+      opts.learnThenRecall,
+      speak,
+      makingProblem,
+      QA,
+      order,
+    ],
   );
 
   return {

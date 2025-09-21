@@ -4,6 +4,7 @@ import ResultsModalChakra from "@/components/ResultsDialogChakra";
 import SettingsDrawerChakra from "@/components/SettingsDrawerChakra";
 import { useTypingEngine } from "@/hooks/useTypingEngine";
 import type { QAPair, Settings } from "@/types/index";
+import { toaster } from "@/lib/toaster";
 import {
   AspectRatio,
   Badge,
@@ -31,9 +32,11 @@ import {
 export default function Typing({
   QA,
   title,
+  makingProblem,
 }: {
   QA: QAPair[];
   title: string;
+  makingProblem: boolean;
   sound?: boolean;
 }) {
   const battle = useBattle();
@@ -79,10 +82,25 @@ export default function Typing({
       randomOrder: settings.orderMode === "random",
     },
     QA,
+    makingProblem,
   );
 
   const settingsDisc = useDisclosure();
   const [resultOpen, setResultOpen] = useState(false);
+
+  const handleStart = () => {
+    if (QA.length === 0) {
+      toaster.create({
+        title: "まちがえた問題がありません",
+        description: "すべてふくしゅうできたよ。",
+        type: "success",
+        duration: 4000,
+        closable: true,
+      });
+    } else {
+      engine.start();
+    }
+  };
 
   // 終了を検知して開く（Enterに依存しない）
   useEffect(() => {
@@ -113,7 +131,7 @@ export default function Typing({
               せってい
             </Button>
             {!engine.state.started || engine.state.finished ? (
-              <Button colorPalette="blue" onClick={engine.start}>
+              <Button colorPalette="blue" onClick={handleStart}>
                 始める
               </Button>
             ) : (

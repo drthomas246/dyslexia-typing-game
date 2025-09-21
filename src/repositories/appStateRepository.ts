@@ -107,3 +107,39 @@ export async function overwriteApp(full: AppSnapshot["state"]) {
   await db.app.put(next);
   return next;
 }
+
+export async function removeMakingProblems(pairs: QAPair[]) {
+  const current = (await db.app.get(ID)) ?? {
+    id: ID,
+    version: SNAPSHOT_VERSION,
+    updatedAt: 0,
+    state: {
+      settings: { mode: "study", sort: "sequential", practiceMode: true },
+      progress: { lastOpenedAt: 0, makingProblem: [] as QAPair[] },
+    },
+  };
+
+  const rmKeys = new Set(pairs.map((p) => `${p.ja}|${p.en}|${p.img ?? ""}`));
+  const prev = current.state.progress.makingProblem ?? [];
+  const nextList = prev.filter(
+    (p) => !rmKeys.has(`${p.ja}|${p.en}|${p.img ?? ""}`),
+  );
+
+  const next: AppSnapshot = {
+    ...current,
+    updatedAt: Date.now(),
+    state: {
+      ...current.state,
+      progress: {
+        ...current.state.progress,
+        makingProblem: nextList,
+      },
+    },
+  };
+  await db.app.put(next);
+  return next;
+}
+
+export async function removeMakingProblem(pair: QAPair) {
+  return removeMakingProblems([pair]);
+}
