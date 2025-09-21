@@ -1,5 +1,4 @@
-import { renderTypingPage, TYPING_ROUTE_POINTS } from "@/data/points";
-import { useSpeech } from "@/hooks/useSpeech";
+import { TYPING_ROUTE_POINTS } from "@/data/points";
 import {
   Button,
   Container,
@@ -8,37 +7,67 @@ import {
   HStack,
   Stack,
 } from "@chakra-ui/react";
-import { useMemo, useState } from "react";
+import { usePage, useSetPage } from "@/contexts/PageContext";
+import Typing from "@/pages/TypingPage";
+import { clearMakingProblems } from "./repositories/appStateRepository";
+import { useLiveQuery } from "dexie-react-hooks";
+import { getMakingProblems } from "@/repositories/appStateRepository";
 
 export default function App() {
-  const [page, setPage] = useState<number>(0);
-  const { warmup, waitUntilReady } = useSpeech();
-  const go = (dest: number) => async () => {
-    // ここはユーザー操作（クリック）内
-    await waitUntilReady(); // voices が来るまで真に待つ（実装側でタイムアウトを外すこと推奨）
-    await warmup(); // 無音1発でTTSを起こす
-    setPage(dest); // その後にTypingへ遷移
+  const making = useLiveQuery(() => getMakingProblems(), [], []);
+  const page = usePage();
+  const setPage = useSetPage();
+  const qaData = (page: number) => {
+    if (page === 999999) {
+      return making;
+    } else {
+      return TYPING_ROUTE_POINTS[page - 1].QA;
+    }
+  };
+  const titleData = (page: number) => {
+    if (page === 999999) {
+      return "間違えた問題";
+    } else {
+      return TYPING_ROUTE_POINTS[page - 1].title;
+    }
   };
 
-  const pageView = useMemo(() => renderTypingPage(page, false), [page]);
-
-  // 該当ページならそれを表示。なければホームを表示。
-  if (pageView) return pageView;
-
   return (
-    <Container p="6" maxW="container.md">
-      <Stack justify="space-between" gap="6">
-        <Heading size="4xl">タイピングゲーム</Heading>
-        <HStack>
-          <For each={TYPING_ROUTE_POINTS}>
-            {(item, index) => (
-              <Button key={index} onClick={go(item.id)}>
-                {item.title}
+    <>
+      {page === 0 ? (
+        <Container p="6" maxW="container.md">
+          <Stack justify="space-between" gap="6">
+            <HStack justify="space-between">
+              <Heading size="4xl">タイピングゲーム</Heading>
+              <Button
+                variant="outline"
+                colorPalette="orange"
+                onClick={() => clearMakingProblems()}
+              >
+                履歴の全消去
               </Button>
-            )}
-          </For>
-        </HStack>
-      </Stack>
-    </Container>
+            </HStack>
+            <HStack>
+              <For each={TYPING_ROUTE_POINTS}>
+                {(item, index) => (
+                  <Button key={index} onClick={() => setPage(item.id)}>
+                    {item.title}
+                  </Button>
+                )}
+              </For>
+            </HStack>
+            {making.length ? (
+              <HStack>
+                <Button colorPalette="teal" onClick={() => setPage(999999)}>
+                  間違えた単語
+                </Button>
+              </HStack>
+            ) : null}
+          </Stack>
+        </Container>
+      ) : (
+        <Typing QA={qaData(page)} title={titleData(page)} />
+      )}
+    </>
   );
 }

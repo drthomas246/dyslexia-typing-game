@@ -3,6 +3,7 @@ import { useSpeech } from "@/hooks/useSpeech";
 import { judgeChar } from "@/lib/judge";
 import type { EngineOptions, EngineState, QAPair } from "@/types/index";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { appendMakingProblems } from "@/repositories/appStateRepository";
 
 function mulberry32(a: number) {
   return function () {
@@ -89,7 +90,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
         learningPhase: "study",
       }));
     },
-    [order, opts.learningMode, QA]
+    [order, opts.learningMode, QA],
   );
 
   // セッション開始
@@ -182,18 +183,30 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
   }, [opts.learningMode, state.started, state.finished]);
 
   // 現在の問題を重複なしで確定集計
-  const finalizeCurrentProblem = useCallback((s: EngineState) => {
-    const seqIndex = s.index; // 出題シーケンス上のインデックス
-    if (s.problemHasMistake) {
-      mistakesSetRef.current.add(seqIndex);
-    }
-    if (s.problemUsedHint) {
-      hintsSetRef.current.add(seqIndex);
-    }
-    // Set のサイズを state に反映
-    setProblemsWithMistake(mistakesSetRef.current.size);
-    setProblemsWithHint(hintsSetRef.current.size);
-  }, []);
+  const finalizeCurrentProblem = useCallback(
+    (s: EngineState) => {
+      const seqIndex = s.index; // 出題シーケンス上のインデックス
+      if (s.problemHasMistake) {
+        mistakesSetRef.current.add(seqIndex);
+      }
+      if (s.problemUsedHint) {
+        hintsSetRef.current.add(seqIndex);
+      }
+      // Set のサイズを state に反映
+      setProblemsWithMistake(mistakesSetRef.current.size);
+      setProblemsWithHint(hintsSetRef.current.size);
+
+      // ★ 追加：学習モードの "study" フェーズでは保存しない
+      const skipSave = !!opts.learningMode && s.learningPhase === "study";
+      // ★ IndexedDB へ保存：ミス or ヒント使用した問題のみ
+      if ((s.problemHasMistake || s.problemUsedHint) && !skipSave) {
+        const pairIndex = order[seqIndex] ?? 0;
+        const pair: QAPair = QA[pairIndex] ?? QA[0];
+        void appendMakingProblems([pair], { unique: true });
+      }
+    },
+    [order, QA, opts.learningMode],
+  );
 
   const next = useCallback(() => {
     if (progressingRef.current) return; // 再入防止
@@ -253,7 +266,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
         hintStep: 0,
       }));
     },
-    [opts.learningMode]
+    [opts.learningMode],
   );
 
   const onKey = useCallback(
@@ -348,7 +361,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
         setTimeout(next, 0);
       }
     },
-    [state, next, opts.learningMode, opts.learnThenRecall, speak]
+    [state, next, opts.learningMode, opts.learnThenRecall, speak],
   );
 
   return {

@@ -1,12 +1,15 @@
 import App from "@/App";
 import { Provider } from "@/components/ui/provider";
+import PageProvider from "@/contexts/PageProvider";
 import React from "react";
 import ReactDOM from "react-dom/client";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Provider>
-      <App />
+      <PageProvider>
+        <App />
+      </PageProvider>
     </Provider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

@@ -1,4 +1,3 @@
-import App from "@/App";
 import AnswerInputView from "@/components/AnswerInputView";
 import InputCapture from "@/components/InputCapture";
 import ResultsModalChakra from "@/components/ResultsDialogChakra";
@@ -22,6 +21,13 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
+import {
+  useSetPage,
+  useBattle,
+  useSort,
+  usePracticeMode,
+} from "@/contexts/PageContext";
+
 export default function Typing({
   QA,
   title,
@@ -30,30 +36,53 @@ export default function Typing({
   title: string;
   sound?: boolean;
 }) {
+  const battle = useBattle();
+  const sort = useSort();
+  const setPage = useSetPage();
+  const practiceMode = usePracticeMode();
   const [settings, setSettings] = useState<Settings>({
     durationSec: 60,
     sound: true,
     language: "ja",
-    learningMode: true,
-    // 学習→リコール（二段階）
-    learnThenRecall: true,
-    orderMode: "sequential",
+    learningMode: !battle, // study が既定 → true
+    learnThenRecall: practiceMode, // true が既定
+    orderMode: sort ? "sequential" : "random", // ★Context 準拠
   });
+
+  useEffect(() => {
+    setSettings((s) =>
+      s.learningMode === !battle ? s : { ...s, learningMode: !battle },
+    );
+  }, [battle]);
+
+  // sort（=順序モード）変更に合わせて orderMode 同期（新規）
+  useEffect(() => {
+    setSettings((s) => {
+      const ctxOrder = sort ? "sequential" : "random";
+      return s.orderMode === ctxOrder ? s : { ...s, orderMode: ctxOrder };
+    });
+  }, [sort]);
+
+  useEffect(() => {
+    setSettings((s) =>
+      s.learnThenRecall === practiceMode
+        ? s
+        : { ...s, learnThenRecall: practiceMode },
+    );
+  }, [practiceMode]);
 
   const engine = useTypingEngine(
     {
       durationSec: settings.durationSec,
       learningMode: settings.learningMode,
-      // 二段階学習フローをエンジンへ
       learnThenRecall: settings.learnThenRecall,
       randomOrder: settings.orderMode === "random",
     },
-    QA
+    QA,
   );
 
   const settingsDisc = useDisclosure();
   const [resultOpen, setResultOpen] = useState(false);
-  const [page, setPage] = useState<"home" | "typing">("typing");
 
   // 終了を検知して開く（Enterに依存しない）
   useEffect(() => {
@@ -71,17 +100,13 @@ export default function Typing({
     return elapsed;
   })();
 
-  if (page === "home" || QA === undefined) {
-    return <App />;
-  }
-
   return (
     <Container p="6" maxW="container.md">
       <Stack gap="6">
         <HStack justify="space-between">
           <Heading size="lg">タイピングゲーム ～{title}～</Heading>
           <HStack>
-            <Button onClick={() => setPage("home")} variant="outline">
+            <Button onClick={() => setPage(0)} variant="outline">
               もどる
             </Button>
             <Button onClick={settingsDisc.onOpen} variant="outline">
