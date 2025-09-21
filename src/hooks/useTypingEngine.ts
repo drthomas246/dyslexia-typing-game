@@ -3,6 +3,10 @@ import { useSpeech } from "@/hooks/useSpeech";
 import { judgeChar } from "@/lib/judge";
 import type { EngineOptions, EngineState, QAPair } from "@/types/index";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  appendMakingProblems,
+  removeMakingProblem,
+} from "@/repositories/appStateRepository";
 
 function mulberry32(a: number) {
   return function () {
@@ -17,7 +21,11 @@ function shuffle<T>(arr: T[], seed: number) {
   return [...arr].sort(() => rng() - 0.5);
 }
 
-export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
+export function useTypingEngine(
+  opts: EngineOptions,
+  QA: QAPair[],
+  makingProblem: boolean,
+) {
   const tickMs = Math.max(16, opts.tickMs ?? 100);
   const { speak } = useSpeech();
 
@@ -89,7 +97,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
         learningPhase: "study",
       }));
     },
-    [order, opts.learningMode, QA]
+    [order, opts.learningMode, QA],
   );
 
   // セッション開始
@@ -182,18 +190,30 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
   }, [opts.learningMode, state.started, state.finished]);
 
   // 現在の問題を重複なしで確定集計
-  const finalizeCurrentProblem = useCallback((s: EngineState) => {
-    const seqIndex = s.index; // 出題シーケンス上のインデックス
-    if (s.problemHasMistake) {
-      mistakesSetRef.current.add(seqIndex);
-    }
-    if (s.problemUsedHint) {
-      hintsSetRef.current.add(seqIndex);
-    }
-    // Set のサイズを state に反映
-    setProblemsWithMistake(mistakesSetRef.current.size);
-    setProblemsWithHint(hintsSetRef.current.size);
-  }, []);
+  const finalizeCurrentProblem = useCallback(
+    (s: EngineState) => {
+      const seqIndex = s.index; // 出題シーケンス上のインデックス
+      if (s.problemHasMistake) {
+        mistakesSetRef.current.add(seqIndex);
+      }
+      if (s.problemUsedHint) {
+        hintsSetRef.current.add(seqIndex);
+      }
+      // Set のサイズを state に反映
+      setProblemsWithMistake(mistakesSetRef.current.size);
+      setProblemsWithHint(hintsSetRef.current.size);
+
+      // ★ 追加：学習モードの "study" フェーズでは保存しない
+      const skipSave = !!opts.learningMode && s.learningPhase === "study";
+      // ★ IndexedDB へ保存：ミス or ヒント使用した問題のみ
+      if ((s.problemHasMistake || s.problemUsedHint) && !skipSave) {
+        const pairIndex = order[seqIndex] ?? 0;
+        const pair: QAPair = QA[pairIndex] ?? QA[0];
+        void appendMakingProblems([pair], { unique: true });
+      }
+    },
+    [order, QA, opts.learningMode],
+  );
 
   const next = useCallback(() => {
     if (progressingRef.current) return; // 再入防止
@@ -253,7 +273,7 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
         hintStep: 0,
       }));
     },
-    [opts.learningMode]
+    [opts.learningMode],
   );
 
   const onKey = useCallback(
@@ -344,11 +364,26 @@ export function useTypingEngine(opts: EngineOptions, QA: QAPair[]) {
           }));
           return;
         }
+        // テスト（learningMode=false）で正解したら削除
+        if (!opts.learningMode && makingProblem) {
+          const pairIndex = order[state.index] ?? 0;
+          const pair: QAPair = QA[pairIndex] ?? QA[0];
+          void removeMakingProblem(pair); // 書き捨てでOK（失敗してもゲーム継続）
+        }
         // 自動で次の問題へ（重複は Set で抑止）
         setTimeout(next, 0);
       }
     },
-    [state, next, opts.learningMode, opts.learnThenRecall, speak]
+    [
+      state,
+      next,
+      opts.learningMode,
+      opts.learnThenRecall,
+      speak,
+      makingProblem,
+      QA,
+      order,
+    ],
   );
 
   return {

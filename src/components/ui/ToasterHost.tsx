@@ -4,15 +4,10 @@ import {
   Spinner,
   Stack,
   Toast,
-  createToaster,
 } from "@chakra-ui/react";
+import { toaster } from "@/lib/toaster";
 
-const toaster = createToaster({
-  placement: "bottom-end",
-  pauseOnPageIdle: true,
-});
-
-export const Toaster = () => {
+export function ToasterHost() {
   return (
     <Portal>
       <ChakraToaster toaster={toaster} insetInline={{ mdDown: "4" }}>
@@ -38,4 +33,4 @@ export const Toaster = () => {
       </ChakraToaster>
     </Portal>
   );
-};
+}

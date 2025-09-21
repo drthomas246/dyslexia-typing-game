@@ -1,5 +1,5 @@
 // src/components/SettingsDrawerChakra.tsx
-import type { Settings, SettingsDrawerProps } from "@/types/index";
+import type { SettingsDrawerProps } from "@/types/index";
 import {
   Button,
   CloseButton,
@@ -11,15 +11,25 @@ import {
   Stack,
   Switch,
 } from "@chakra-ui/react";
+import {
+  useBattle,
+  useSetBattle,
+  useSetSort,
+  useSetPracticeMode,
+  useSort,
+  usePracticeMode,
+} from "@/contexts/PageContext";
 
 export default function SettingsDrawerChakra({
   open,
   onClose,
-  settings,
-  onChange,
 }: SettingsDrawerProps) {
-  const set = (patch: Partial<Settings>) => onChange({ ...settings, ...patch });
-  const learnThenRecall = settings.learnThenRecall;
+  const battle = useBattle();
+  const sort = useSort(); // true=sequential, false=random
+  const setBattle = useSetBattle();
+  const setSort = useSetSort();
+  const practiceMode = usePracticeMode();
+  const setPracticeMode = useSetPracticeMode();
 
   return (
     <Drawer.Root
@@ -44,10 +54,12 @@ export default function SettingsDrawerChakra({
                 <Field.Root>
                   <Field.Label>遊び方</Field.Label>
                   <RadioGroup.Root
-                    value={settings.learningMode ? "learning" : "testing"}
-                    onValueChange={(e) =>
-                      set({ learningMode: e.value === "learning" })
-                    }
+                    value={!battle ? "learning" : "testing"}
+                    onValueChange={(arg) => {
+                      const v = typeof arg === "string" ? arg : arg?.value;
+                      if (!v) return;
+                      setBattle(v !== "learning");
+                    }}
                   >
                     <HStack gap="6">
                       <RadioGroup.Item value="learning">
@@ -69,21 +81,23 @@ export default function SettingsDrawerChakra({
                 <Field.Root>
                   <Field.Label>じゅん番</Field.Label>
                   <RadioGroup.Root
-                    value={settings.orderMode}
-                    onValueChange={(e) =>
-                      set({ orderMode: e.value as "random" | "sequential" })
-                    }
+                    value={sort ? "sequential" : "random"} // ★修正
+                    onValueChange={(arg) => {
+                      const v = typeof arg === "string" ? arg : arg?.value;
+                      if (!v) return;
+                      setSort(v === "sequential"); // ★修正：true=sequential
+                    }}
                   >
                     <HStack gap="6">
-                      <RadioGroup.Item value="random">
-                        <RadioGroup.ItemHiddenInput />
-                        <RadioGroup.ItemIndicator />
-                        <RadioGroup.ItemText>ばらばら</RadioGroup.ItemText>
-                      </RadioGroup.Item>
                       <RadioGroup.Item value="sequential">
                         <RadioGroup.ItemHiddenInput />
                         <RadioGroup.ItemIndicator />
                         <RadioGroup.ItemText>ならびじゅん</RadioGroup.ItemText>
+                      </RadioGroup.Item>
+                      <RadioGroup.Item value="random">
+                        <RadioGroup.ItemHiddenInput />
+                        <RadioGroup.ItemIndicator />
+                        <RadioGroup.ItemText>ばらばら</RadioGroup.ItemText>
                       </RadioGroup.Item>
                     </HStack>
                   </RadioGroup.Root>
@@ -97,10 +111,14 @@ export default function SettingsDrawerChakra({
                 <Field.Root>
                   <Field.Label>練習→ふく習→次の問題（2だん階）</Field.Label>
                   <Switch.Root
-                    checked={learnThenRecall}
-                    onCheckedChange={(e) => set({ learnThenRecall: e.checked })}
+                    checked={practiceMode}
+                    onCheckedChange={(arg) => {
+                      const checked =
+                        typeof arg === "boolean" ? arg : !!arg?.checked;
+                      setPracticeMode(checked);
+                    }}
                     colorPalette="blue"
-                    disabled={!settings.learningMode}
+                    disabled={battle}
                   >
                     <Switch.HiddenInput />
                     <Switch.Control />

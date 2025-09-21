@@ -3,6 +3,7 @@ import type {
   IconButtonProps,
 } from "@chakra-ui/react";
 import type { ThemeProviderProps } from "next-themes";
+import type { AppSnapshot } from "@/db";
 
 export type ColorModeButtonProps = Omit<IconButtonProps, "aria-label">;
 
@@ -134,4 +135,12 @@ export type MapPoint = {
   y: number;
   title: string;
   QA: QAPair[];
+};
+
+type AppState = AppSnapshot["state"];
+type AppSettings = AppState["settings"];
+type AppProgress = AppState["progress"];
+export type AppStatePatch = {
+  settings?: Partial<AppSettings>;
+  progress?: Partial<AppProgress>;
 };
