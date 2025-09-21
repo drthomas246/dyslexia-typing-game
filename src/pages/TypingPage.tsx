@@ -89,6 +89,7 @@ export default function Typing({
   const [resultOpen, setResultOpen] = useState(false);
 
   const handleStart = () => {
+    setResultOpen(false);
     if (QA.length === 0) {
       toaster.create({
         title: "まちがえた問題がありません",
@@ -256,10 +257,7 @@ export default function Typing({
       <ResultsModalChakra
         open={resultOpen}
         setOpen={setResultOpen}
-        onRetry={() => {
-          setResultOpen(false);
-          engine.start();
-        }}
+        onRetry={handleStart}
         summary={{
           timeSec: timeSecActual,
           hints: engine.problemsWithHint,
