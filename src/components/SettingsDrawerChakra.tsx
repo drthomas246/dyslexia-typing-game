@@ -81,11 +81,11 @@ export default function SettingsDrawerChakra({
                 <Field.Root>
                   <Field.Label>じゅん番</Field.Label>
                   <RadioGroup.Root
-                    value={sort ? "sequential" : "random"} // ★修正
+                    value={sort ? "sequential" : "random"}
                     onValueChange={(arg) => {
                       const v = typeof arg === "string" ? arg : arg?.value;
                       if (!v) return;
-                      setSort(v === "sequential"); // ★修正：true=sequential
+                      setSort(v === "sequential"); // true = sequential
                     }}
                   >
                     <HStack gap="6">
