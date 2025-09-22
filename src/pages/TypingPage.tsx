@@ -228,8 +228,12 @@ export default function Typing({
 
         {/* 入力キャプチャ（ダイアログ表示中は無効） */}
         <InputCapture
-          enabled={!engine.state.finished && !resultOpen}
+          enabled={!engine.state.finished && !resultOpen && !settingsDisc.open}
           onKey={(ch, e) => {
+            if (ch === "\t" || ch === " " || ch === "\b") {
+              e.preventDefault();
+              e.stopPropagation();
+            }
             if (ch === "\n") {
               e.preventDefault();
               if (!engine.state.started) {
