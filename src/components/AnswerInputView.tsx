@@ -1,3 +1,5 @@
+// biome-ignore-all lint/suspicious/noArrayIndexKey: このファイルは表示順が固定のため index key を許容
+
 import { Box } from "@chakra-ui/react";
 
 /**

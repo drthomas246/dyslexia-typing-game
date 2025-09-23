@@ -7,9 +7,9 @@ import QA_WEEK from "@/data/texts/qa_week";
 import type { MapPoint } from "@/types/index";
 
 export const TYPING_ROUTE_POINTS: MapPoint[] = [
-  { id: 1, x: 0.2, y: 0.3, title: "1～10までの数字", QA: QA_NUMBER },
-  { id: 2, x: 0.65, y: 0.45, title: "11～20までの数字", QA: QA_NUMBER11 },
-  { id: 3, x: 0.77, y: 0.77, title: "月の名前", QA: QA_MONTH },
-  { id: 4, x: 0.285, y: 0.8, title: "曜日の名前", QA: QA_WEEK },
-  { id: 5, x: 0.5, y: 0.2, title: "ステップ1", QA: QA_STEP1 },
+	{ id: 1, x: 0.2, y: 0.3, title: "1～10までの数字", QA: QA_NUMBER },
+	{ id: 2, x: 0.65, y: 0.45, title: "11～20までの数字", QA: QA_NUMBER11 },
+	{ id: 3, x: 0.77, y: 0.77, title: "月の名前", QA: QA_MONTH },
+	{ id: 4, x: 0.285, y: 0.8, title: "曜日の名前", QA: QA_WEEK },
+	{ id: 5, x: 0.5, y: 0.2, title: "ステップ1", QA: QA_STEP1 },
 ];

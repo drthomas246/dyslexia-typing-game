@@ -1,6 +1,7 @@
 // src/lib/useSpeech.ts
-import type { SpeakOpts } from "@/types/index";
+
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { SpeakOpts } from "@/types/index";
 
 export function useSpeech() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -22,13 +23,13 @@ export function useSpeech() {
   useEffect(() => {
     const load = () => {
       const v = speechSynthesis.getVoices();
-      if (v && v.length) {
+      if (v.length) {
         setVoices(v);
         readyRef.current = true;
         setIsReady(true); // ★追加
         // ★ voices を待っている呼び出しを解放
         if (readyWaiters.current.length) {
-          readyWaiters.current.forEach((resolve) => resolve());
+          readyWaiters.current.map((resolve) => resolve());
           readyWaiters.current = [];
         }
       }
@@ -147,10 +148,10 @@ export function useSpeech() {
             // no-op
           }
         },
-        readyRef.current ? 0 : 60
+        readyRef.current ? 0 : 60,
       );
     },
-    [voices, stop]
+    [voices, stop],
   );
 
   // ★拡張: isReady, waitUntilReady, warmup を公開
