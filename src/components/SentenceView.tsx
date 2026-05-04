@@ -34,7 +34,7 @@ export default function SentenceView({
 				return (
 					<Box
 						as="span"
-						key={i}
+						key={`span${i * 10}`}
 						color={color}
 						textDecoration={deco}
 						fontWeight={weight}

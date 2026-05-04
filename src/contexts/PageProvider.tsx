@@ -1,119 +1,147 @@
-// @/contexts/PageProvider.tsx
-
 import { useLiveQuery } from "dexie-react-hooks";
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { db } from "@/db";
 import { saveApp } from "@/repositories/appStateRepository";
 import {
-	UserBattleContext,
-	UserPageContext,
-	UserPracticeModeContext,
-	UserSetBattleContext,
-	UserSetPageContext,
-	UserSetPracticeModeContext,
-	UserSetSortContext,
-	UserSortContext,
+  UserBattleContext,
+  UserPageContext,
+  UserPracticeModeContext,
+  UserSetBattleContext,
+  UserSetPageContext,
+  UserSetPracticeModeContext,
+  UserSetSortContext,
+  UserSortContext,
 } from "./PageContext";
 
 export default function PageProvider({ children }: { children: ReactNode }) {
-	const [page, setPage] = useState<number>(0);
-	const snap = useLiveQuery(() => db.app.get("app"), [], undefined);
+  const [page, setPage] = useState<number>(0);
+  const snap = useLiveQuery(() => db.app.get("app"), [], undefined);
 
-	// ★ snap が無い間は既定値（study / sequential / true）で動かす
-	const battleFromSnap = useMemo(
-		() => (snap?.state?.settings?.mode ?? "study") === "battle",
-		[snap],
-	);
-	const sortFromSnap = useMemo(() => {
-		const s = snap?.state?.settings?.sort ?? "sequential";
-		return s === "sequential"; // true=sequential, false=random
-	}, [snap]);
-	const practiceFromSnap = useMemo(
-		() => (snap?.state?.settings?.practiceMode ?? true) as boolean,
-		[snap],
-	);
+  // ★ snap が無い間は既定値（study / sequential / true）で動かす
+  const battleFromSnap = useMemo(
+    () => (snap?.state?.settings?.mode ?? "study") === "battle",
+    [snap],
+  );
+  const sortFromSnap = useMemo(() => {
+    const s = snap?.state?.settings?.sort ?? "sequential";
+    return s === "sequential"; // true=sequential, false=random
+  }, [snap]);
+  const practiceFromSnap = useMemo(
+    () => (snap?.state?.settings?.practiceMode ?? true) as boolean,
+    [snap],
+  );
 
-	// 楽観更新（任意）
-	const [optimisticBattle, setOptimisticBattle] = useState<boolean | null>(
-		null,
-	);
-	const [optimisticSort, setOptimisticSort] = useState<boolean | null>(null);
-	const [optimisticPractice, setOptimisticPractice] = useState<boolean | null>(
-		null,
-	);
+  // 楽観更新（任意）
+  const [optimisticBattle, setOptimisticBattle] = useState<boolean | null>(
+    null,
+  );
+  const [optimisticSort, setOptimisticSort] = useState<boolean | null>(null);
+  const [optimisticPractice, setOptimisticPractice] = useState<boolean | null>(
+    null,
+  );
 
-	const battle = optimisticBattle ?? battleFromSnap;
-	const sort = optimisticSort ?? sortFromSnap; // true=sequential
-	const practice = optimisticPractice ?? practiceFromSnap;
+  const battle = optimisticBattle ?? battleFromSnap;
+  const sort = optimisticSort ?? sortFromSnap; // true=sequential
+  const practice = optimisticPractice ?? practiceFromSnap;
 
-	const setBattle = useCallback(
-		async (v: boolean | ((prev: boolean) => boolean)) => {
-			const next = typeof v === "function" ? v(battle) : v;
-			setOptimisticBattle(next);
-			await saveApp({
-				settings: {
-					mode: next ? "battle" : "study",
-					sort: sort ? "sequential" : "random",
-					practiceMode: practice,
-				},
-				progress: { lastOpenedAt: Date.now() },
-			});
-			setOptimisticBattle(null);
-		},
-		[battle, sort, practice],
-	);
+  useEffect(() => {
+    if (optimisticBattle !== null && optimisticBattle === battleFromSnap) {
+      setOptimisticBattle(null);
+    }
+  }, [optimisticBattle, battleFromSnap]);
 
-	const setSort = useCallback(
-		async (v: boolean | ((prev: boolean) => boolean)) => {
-			const next = typeof v === "function" ? v(sort) : v; // next=true => sequential
-			setOptimisticSort(next);
-			await saveApp({
-				settings: {
-					mode: battle ? "battle" : "study",
-					sort: next ? "sequential" : "random", // ★正しいマッピング
-					practiceMode: practice,
-				},
-				progress: { lastOpenedAt: Date.now() },
-			});
-			setOptimisticSort(null);
-		},
-		[battle, sort, practice],
-	);
+  useEffect(() => {
+    if (optimisticSort !== null && optimisticSort === sortFromSnap) {
+      setOptimisticSort(null);
+    }
+  }, [optimisticSort, sortFromSnap]);
 
-	const setPracticeMode = useCallback(
-		async (v: boolean | ((prev: boolean) => boolean)) => {
-			const next = typeof v === "function" ? v(practice) : v;
-			setOptimisticPractice(next);
-			await saveApp({
-				settings: {
-					mode: battle ? "battle" : "study",
-					sort: sort ? "sequential" : "random",
-					practiceMode: next,
-				},
-				progress: { lastOpenedAt: Date.now() },
-			});
-			setOptimisticPractice(null);
-		},
-		[battle, sort, practice],
-	);
+  useEffect(() => {
+    if (optimisticPractice !== null && optimisticPractice === practiceFromSnap) {
+      setOptimisticPractice(null);
+    }
+  }, [optimisticPractice, practiceFromSnap]);
 
-	return (
-		<UserPageContext.Provider value={page}>
-			<UserSetPageContext.Provider value={setPage}>
-				<UserBattleContext.Provider value={battle}>
-					<UserSetBattleContext.Provider value={setBattle}>
-						<UserSortContext.Provider value={sort}>
-							<UserSetSortContext.Provider value={setSort}>
-								<UserPracticeModeContext.Provider value={practice}>
-									<UserSetPracticeModeContext.Provider value={setPracticeMode}>
-										{children}
-									</UserSetPracticeModeContext.Provider>
-								</UserPracticeModeContext.Provider>
-							</UserSetSortContext.Provider>
-						</UserSortContext.Provider>
-					</UserSetBattleContext.Provider>
-				</UserBattleContext.Provider>
-			</UserSetPageContext.Provider>
-		</UserPageContext.Provider>
-	);
+  const setBattle = useCallback(
+    async (v: boolean | ((prev: boolean) => boolean)) => {
+      const next = typeof v === "function" ? v(battle) : v;
+      setOptimisticBattle(next);
+      try {
+        await saveApp({
+          settings: {
+            mode: next ? "battle" : "study",
+            sort: sort ? "sequential" : "random",
+            practiceMode: practice,
+          },
+          progress: { lastOpenedAt: Date.now() },
+        });
+      } catch (error) {
+        setOptimisticBattle(null);
+        throw error;
+      }
+    },
+    [battle, sort, practice],
+  );
+
+  const setSort = useCallback(
+    async (v: boolean | ((prev: boolean) => boolean)) => {
+      const next = typeof v === "function" ? v(sort) : v; // next=true => sequential
+      setOptimisticSort(next);
+      try {
+        await saveApp({
+          settings: {
+            mode: battle ? "battle" : "study",
+            sort: next ? "sequential" : "random", // ★正しいマッピング
+            practiceMode: practice,
+          },
+          progress: { lastOpenedAt: Date.now() },
+        });
+      } catch (error) {
+        setOptimisticSort(null);
+        throw error;
+      }
+    },
+    [battle, sort, practice],
+  );
+
+  const setPracticeMode = useCallback(
+    async (v: boolean | ((prev: boolean) => boolean)) => {
+      const next = typeof v === "function" ? v(practice) : v;
+      setOptimisticPractice(next);
+      try {
+        await saveApp({
+          settings: {
+            mode: battle ? "battle" : "study",
+            sort: sort ? "sequential" : "random",
+            practiceMode: next,
+          },
+          progress: { lastOpenedAt: Date.now() },
+        });
+      } catch (error) {
+        setOptimisticPractice(null);
+        throw error;
+      }
+    },
+    [battle, sort, practice],
+  );
+
+  return (
+    <UserPageContext.Provider value={page}>
+      <UserSetPageContext.Provider value={setPage}>
+        <UserBattleContext.Provider value={battle}>
+          <UserSetBattleContext.Provider value={setBattle}>
+            <UserSortContext.Provider value={sort}>
+              <UserSetSortContext.Provider value={setSort}>
+                <UserPracticeModeContext.Provider value={practice}>
+                  <UserSetPracticeModeContext.Provider value={setPracticeMode}>
+                    {children}
+                  </UserSetPracticeModeContext.Provider>
+                </UserPracticeModeContext.Provider>
+              </UserSetSortContext.Provider>
+            </UserSortContext.Provider>
+          </UserSetBattleContext.Provider>
+        </UserBattleContext.Provider>
+      </UserSetPageContext.Provider>
+    </UserPageContext.Provider>
+  );
 }
