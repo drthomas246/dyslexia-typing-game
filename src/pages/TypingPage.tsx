@@ -14,7 +14,9 @@ import {
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import parse from "html-react-parser";
+import { useEffect, useRef, useState } from "react";
 import AnswerInputView from "@/components/AnswerInputView";
 import InputCapture from "@/components/InputCapture";
 import ResultsModalChakra from "@/components/ResultsDialogChakra";
@@ -25,40 +27,64 @@ import {
   useSetPage,
   useSort,
 } from "@/contexts/PageContext";
+import { STICKER_OPTIONS } from "@/data/stickers";
 import { useTypingEngine } from "@/hooks/useTypingEngine";
 import { toaster } from "@/lib/toaster";
+import {
+  addCalendarSticker,
+  getCalendarStickers,
+  markPointCompleted,
+  markPointStudied,
+} from "@/repositories/appStateRepository";
 import type { QAPair, Settings } from "@/types/index";
 
+/**
+ * タイピングゲームのメインコンポーネント
+ * @param QA 問題と回答のペア配列
+ * @param title タイトル文字列
+ * @param makingProblem 復習問題モードかどうか
+ * @param pointId 現在のポイントID（進捗管理用）
+ * @param sound 音声有効化フラグ（未使用）
+ */
 export default function Typing({
   QA,
   title,
   makingProblem,
+  pointId,
 }: {
   QA: QAPair[];
   title: string;
   makingProblem: boolean;
+  pointId?: number;
   sound?: boolean;
 }) {
   const battle = useBattle();
   const sort = useSort();
   const setPage = useSetPage();
   const practiceMode = usePracticeMode();
+
+  // 設定の初期化と管理
   const [settings, setSettings] = useState<Settings>({
     durationSec: 60,
     sound: true,
     language: "ja",
-    learningMode: !battle, // study が既定 → true
-    learnThenRecall: practiceMode, // true が既定
-    orderMode: sort ? "sequential" : "random", // ★Context 準拠
+    learningMode: !battle,
+    learnThenRecall: practiceMode,
+    orderMode: sort ? "sequential" : "random",
   });
 
+  /**
+   * battleモードが変更されたら学習モードを更新
+   */
   useEffect(() => {
     setSettings((s) =>
       s.learningMode === !battle ? s : { ...s, learningMode: !battle },
     );
   }, [battle]);
 
-  // sort（=順序モード）変更に合わせて orderMode 同期（新規）
+  /**
+   * sortモードが変更されたら出題順序を更新
+   */
   useEffect(() => {
     setSettings((s) => {
       const ctxOrder = sort ? "sequential" : "random";
@@ -66,6 +92,9 @@ export default function Typing({
     });
   }, [sort]);
 
+  /**
+   * 練習モードが変更されたら学習→リコールモードを更新
+   */
   useEffect(() => {
     setSettings((s) =>
       s.learnThenRecall === practiceMode
@@ -74,6 +103,7 @@ export default function Typing({
     );
   }, [practiceMode]);
 
+  // タイピングエンジンの初期化
   const engine = useTypingEngine(
     {
       durationSec: settings.durationSec,
@@ -87,9 +117,29 @@ export default function Typing({
 
   const settingsDisc = useDisclosure();
   const [resultOpen, setResultOpen] = useState(false);
+  const [selectedStickerId, setSelectedStickerId] = useState<string>();
+  const [pendingStickerId, setPendingStickerId] = useState<string>();
+  const [savingSticker, setSavingSticker] = useState(false);
+  const resultHandledRef = useRef(false);
+  const calendarStickers = useLiveQuery(
+    () => getCalendarStickers(),
+    [],
+    {} as Record<
+      string,
+      { stickerId: string; earnedAt: number; mode: "test" }[]
+    >,
+  );
 
+  /**
+   * ゲーム開始ハンドラー
+   * 問題が無い場合はトースト表示、ある場合はエンジンを開始
+   */
   const handleStart = () => {
     setResultOpen(false);
+    setSelectedStickerId(undefined);
+    setPendingStickerId(undefined);
+    setSavingSticker(false);
+    resultHandledRef.current = false;
     if (QA.length === 0) {
       toaster.create({
         title: "まちがえた問題がありません",
@@ -103,17 +153,103 @@ export default function Typing({
     }
   };
 
-  // 終了を検知して開く（Enterに依存しない）
+  const canPickSticker = !settings.learningMode && !makingProblem;
+  const today = new Date();
+  const todayDateKey = `${today.getFullYear()}-${String(
+    today.getMonth() + 1,
+  ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const todayDateLabel = `${today.getMonth() + 1}がつ ${today.getDate()}にち`;
+  const todayStickerIds = (
+    (calendarStickers?.[todayDateKey] ?? []) as {
+      stickerId: string;
+      earnedAt: number;
+      mode: "test";
+    }[]
+  ).map((entry) => entry.stickerId);
+  const previewStickerIds = selectedStickerId
+    ? todayStickerIds
+    : pendingStickerId
+      ? [...todayStickerIds, pendingStickerId]
+    : todayStickerIds;
+
+  const handleStickerSelect = async (stickerId: string) => {
+    if (!canPickSticker || selectedStickerId || savingSticker) return;
+
+    setPendingStickerId(stickerId);
+    setSavingSticker(true);
+    try {
+      const now = new Date();
+      const dateKey = `${now.getFullYear()}-${String(
+        now.getMonth() + 1,
+      ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      await addCalendarSticker(dateKey, stickerId);
+      setSelectedStickerId(stickerId);
+      setPendingStickerId(undefined);
+      toaster.create({
+        title: "ステッカーを はりました",
+        description: "カレンダーに きょうの きろくを のこしました。",
+        type: "success",
+        duration: 3000,
+        closable: true,
+      });
+    } finally {
+      setPendingStickerId(undefined);
+      setSavingSticker(false);
+    }
+  };
+
+  /**
+   * セッション終了を検知して結果モーダルを表示
+   * ★改善：完了条件を厳密にチェックして進捗を記録
+   */
   useEffect(() => {
-    if (engine.state.started && engine.state.finished) {
-      const id = setTimeout(() => setResultOpen(true), 0);
+    if (
+      engine.state.started &&
+      engine.state.finished &&
+      !resultHandledRef.current
+    ) {
+      resultHandledRef.current = true;
+      const id = setTimeout(() => {
+        setResultOpen(true);
+
+        // 完了状態のマーク（復習問題でない場合のみ）
+        if (pointId !== undefined && !makingProblem) {
+          // ★改善：完全正解の判定
+          // テストモード + 全問完了 + ミス0 + ヒント0 の場合のみ緑チェック
+          const isPerfectCompletion =
+            !settings.learningMode &&
+            !engine.wasManuallyStoppedEarly &&
+            engine.problemsWithMistake === 0 &&
+            engine.problemsWithHint === 0;
+
+          if (isPerfectCompletion) {
+            // 完全正解 → 緑のチェックマーク
+            markPointCompleted(pointId);
+          } else {
+            // それ以外（途中終了、ミス、ヒント使用）→ 黄色の学習済みマーク
+            markPointStudied(pointId);
+          }
+        }
+      }, 0);
       return () => clearTimeout(id);
     }
-  }, [engine.state.started, engine.state.finished]);
+  }, [
+    engine.state.started,
+    engine.state.finished,
+    engine.wasManuallyStoppedEarly, // ★追加：途中終了フラグを監視
+    pointId,
+    makingProblem,
+    settings.learningMode,
+    engine.problemsWithMistake,
+    engine.problemsWithHint, // ★追加：ヒント使用数を監視
+  ]);
+
+  /**
+   * 実際の経過時間を計算
+   * @returns 経過秒数
+   */
   const timeSecActual = (() => {
-    // startAt が無ければ念のため fallback
     if (!engine.state.startAt) return 0;
-    // 学習モードは timeLeftSec が固定なので、startAt からの実時間で計測
     const now = Date.now();
     const elapsed = Math.floor((now - engine.state.startAt) / 1000);
     return elapsed;
@@ -122,8 +258,9 @@ export default function Typing({
   return (
     <Container p="6" maxW="container.md">
       <Stack gap="6">
+        {/* ヘッダー部分 */}
         <HStack justify="space-between">
-          <Heading size="lg">タイピングゲーム ～{title}～</Heading>
+          <Heading size="lg">タイピングゲーム ～{parse(title)}～</Heading>
           <HStack>
             <Button onClick={() => setPage(0)} variant="outline">
               もどる
@@ -132,50 +269,147 @@ export default function Typing({
               せってい
             </Button>
             {!engine.state.started || engine.state.finished ? (
-              <Button colorPalette="blue" onClick={handleStart}>
-                始める
+              <Button
+                colorPalette="blue"
+                onClick={handleStart}
+                alignItems="end"
+                paddingY="5px"
+              >
+                <ruby>
+                  始<rt style={{ fontSize: "0.5em" }}>はじ</rt>
+                </ruby>
+                める
               </Button>
             ) : (
-              <Button colorPalette="red" onClick={engine.stop}>
-                終わる
+              <Button
+                colorPalette="red"
+                onClick={engine.stop}
+                alignItems="end"
+                paddingY="5px"
+              >
+                <ruby>
+                  終<rt style={{ fontSize: "0.5em" }}>お</rt>
+                </ruby>
+                わる
               </Button>
             )}
           </HStack>
         </HStack>
 
-        {/* 学習モードの段階表示（任意） */}
+        {/* モード表示バッジ */}
         <HStack h="25px">
           {settings.learningMode ? (
             <>
               <Badge
+                paddingY="5px"
                 colorPalette={
                   engine.state.learningPhase === "study" ? "blue" : "purple"
                 }
                 variant="solid"
+                fontSize="lg"
+                alignItems="end"
               >
-                {engine.state.learningPhase === "study"
-                  ? "練習（スペル＋音声）"
-                  : "ふく習（Tabキーでヒント。1回目で音声・2回目でスペル）"}
+                {engine.state.learningPhase === "study" ? (
+                  <>
+                    <ruby>
+                      練習<rt style={{ fontSize: "0.5em" }}>れんしゅう</rt>
+                    </ruby>
+                    （スペル＋
+                    <ruby>
+                      音声<rt style={{ fontSize: "0.5em" }}>おんせい</rt>
+                    </ruby>
+                    ）
+                  </>
+                ) : (
+                  <>
+                    ふく
+                    <ruby>
+                      習<rt style={{ fontSize: "0.5em" }}>しゅう</rt>
+                    </ruby>
+                    （Tabキーでヒント。1
+                    <ruby>
+                      回目<rt style={{ fontSize: "0.5em" }}>かいめ</rt>
+                    </ruby>
+                    で
+                    <ruby>
+                      音声<rt style={{ fontSize: "0.5em" }}>おんせい</rt>
+                    </ruby>
+                    ・2
+                    <ruby>
+                      回目<rt style={{ fontSize: "0.5em" }}>かいめ</rt>
+                    </ruby>
+                    でスペル）
+                  </>
+                )}
               </Badge>
-              <Text fontSize="sm" color="fg.muted">
-                学習で正かい →
-                ふく習へ。ふく習で正かいすると次の問題に進みます。
+              <Text fontSize="lg" color="fg.muted">
+                <ruby>
+                  学習<rt style={{ fontSize: "0.5em" }}>がくしゅう</rt>
+                </ruby>
+                で
+                <ruby>
+                  正<rt style={{ fontSize: "0.5em" }}>せい</rt>
+                </ruby>
+                かい → ふく
+                <ruby>
+                  習<rt style={{ fontSize: "0.5em" }}>しゅう</rt>
+                </ruby>
+                へ。ふく
+                <ruby>
+                  習<rt style={{ fontSize: "0.5em" }}>しゅう</rt>
+                </ruby>
+                で
+                <ruby>
+                  正<rt style={{ fontSize: "0.5em" }}>せい</rt>
+                </ruby>
+                かいすると
+                <ruby>
+                  次<rt style={{ fontSize: "0.5em" }}>つぎ</rt>
+                </ruby>
+                の
+                <ruby>
+                  問題<rt style={{ fontSize: "0.5em" }}>もんだい</rt>
+                </ruby>
+                に
+                <ruby>
+                  進<rt style={{ fontSize: "0.5em" }}>すす</rt>
+                </ruby>
+                みます。
               </Text>
             </>
           ) : (
-            <Badge colorPalette="orange" variant="solid">
-              テスト（Tabキーでヒント。1回目で音声・2回目でスペル）
+            <Badge
+              colorPalette="orange"
+              variant="solid"
+              fontSize="md"
+              paddingY="5px"
+              alignItems="end"
+            >
+              テスト（Tabキーでヒント。1
+              <ruby>
+                回目<rt style={{ fontSize: "0.5em" }}>かいめ</rt>
+              </ruby>
+              で
+              <ruby>
+                音声<rt style={{ fontSize: "0.5em" }}>おんせい</rt>
+              </ruby>
+              ・2
+              <ruby>
+                回目<rt style={{ fontSize: "0.5em" }}>かいめ</rt>
+              </ruby>
+              でスペル）
             </Badge>
           )}
         </HStack>
 
-        {/* 日本語の問題文 */}
+        {/* 問題表示エリア */}
         <Box
           p="4"
           rounded="xl"
           borderWidth="1px"
           bg="bg.subtle"
-          h="calc(100vh - 398px)"
+          h="calc(100vh - 410px)"
+          whiteSpace="pre-line"
         >
           <Grid
             templateColumns={"1fr calc(100vh - 432px)"}
@@ -183,8 +417,41 @@ export default function Typing({
             alignItems="center"
           >
             <GridItem>
-              <Text fontSize="6xl">
-                {engine.state.questionJa || "問題がここに出るよ"}
+              <Text
+                fontSize={
+                  !engine.state.questionJa
+                    ? "6xl"
+                    : (() => {
+                        const text = engine.state.questionJaPlain;
+                        const lineCount = (text.match(/\n/g) || []).length + 1;
+                        const charCount = text.length;
+
+                        // 行数優先で判定
+                        if (lineCount > 5) return "3xl";
+                        if (lineCount > 3) return "4xl";
+                        if (lineCount > 2) return "5xl";
+
+                        // 行数が少ない場合は文字数で判定
+                        if (charCount > 80) return "4xl";
+                        if (charCount > 50) return "5xl";
+                        return "6xl";
+                      })()
+                }
+                lineHeight="1.3"
+                wordBreak="break-word"
+              >
+                {engine.state.questionJa || (
+                  <>
+                    <ruby>
+                      問題<rt style={{ fontSize: "0.5em" }}>もんだい</rt>
+                    </ruby>
+                    がここに
+                    <ruby>
+                      出<rt style={{ fontSize: "0.5em" }}>で</rt>
+                    </ruby>
+                    るよ
+                  </>
+                )}
               </Text>
             </GridItem>
             <GridItem>
@@ -193,7 +460,7 @@ export default function Typing({
                   {engine.state.questionImg ? (
                     <Image
                       src={engine.state.questionImg}
-                      alt={engine.state.questionJa}
+                      alt="image"
                       fit="contain"
                       rounded="lg"
                       borderWidth="1px"
@@ -210,7 +477,7 @@ export default function Typing({
           </Grid>
         </Box>
 
-        {/* 入力文字の色分け表示 */}
+        {/* 回答入力エリア */}
         <Box p="6" rounded="xl" borderWidth="1px" minH="140px">
           <AnswerInputView
             typed={engine.state.typed}
@@ -218,13 +485,35 @@ export default function Typing({
             answer={engine.state.answerEn}
             showHint={engine.state.showHint}
           />
-          <Text mt="3" fontSize="sm" color="fg.muted">
-            スペースキー: 次のたん語 / エンターキー: 始める、終わる /
-            バックスペースキー: 1文字消す / タブキー: ヒント
+          <Text mt="3" fontSize="lg" color="fg.muted">
+            ➡:{" "}
+            <ruby>
+              次<rt style={{ fontSize: "0.5em" }}>つぎ</rt>
+            </ruby>
+            のたん
+            <ruby>
+              語<rt style={{ fontSize: "0.5em" }}>ご</rt>
+            </ruby>{" "}
+            / エンターキー:{" "}
+            <ruby>
+              始<rt style={{ fontSize: "0.5em" }}>はじ</rt>
+            </ruby>
+            める、
+            <ruby>
+              終<rt style={{ fontSize: "0.5em" }}>お</rt>
+            </ruby>
+            わる / バックスペースキー: 1
+            <ruby>
+              文字<rt style={{ fontSize: "0.5em" }}>もじ</rt>
+            </ruby>
+            <ruby>
+              消<rt style={{ fontSize: "0.5em" }}>け</rt>
+            </ruby>
+            す / タブキー: ヒント
           </Text>
         </Box>
 
-        {/* 入力キャプチャ（ダイアログ表示中は無効） */}
+        {/* キー入力キャプチャ */}
         <InputCapture
           enabled={!engine.state.finished && !resultOpen && !settingsDisc.open}
           onKey={(ch, e) => {
@@ -242,24 +531,34 @@ export default function Typing({
                 return;
               }
             }
-            engine.onKey(ch); // Tab/Space/Backspace/通常文字 すべてここで処理
+            engine.onKey(ch);
           }}
         />
       </Stack>
 
+      {/* 設定ドロワー */}
       <SettingsDrawerChakra
         open={settingsDisc.open}
         onClose={settingsDisc.onClose}
         settings={settings}
         onChange={setSettings}
-        // エンジンを渡して Drawer 側から study/recall を手動切替可能に
         engine={engine}
       />
 
+      {/* 結果モーダル */}
       <ResultsModalChakra
         open={resultOpen}
         setOpen={setResultOpen}
         onRetry={handleStart}
+        stickerPicker={{
+          enabled: canPickSticker,
+          options: STICKER_OPTIONS,
+          selectedStickerId,
+          saving: savingSticker,
+          previewDateLabel: todayDateLabel,
+          previewStickers: previewStickerIds,
+          onSelect: handleStickerSelect,
+        }}
         summary={{
           timeSec: timeSecActual,
           hints: engine.problemsWithHint,
