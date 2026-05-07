@@ -89,59 +89,29 @@ export function useTypingEngine(
 
   // 進行制御
   const progressingRef = useRef(false); // next() の再入防止
-  const startedRef = useRef(false); // 初回ロード制御
 
   /**
    * 問題順序を初期化する
    * ランダムモードの場合はシャッフル、それ以外は順番通り
    */
-  const initOrder = useCallback(() => {
+  const createOrder = useCallback(() => {
     const seed = opts.seed ?? Date.now() % 1_000_000;
     const indices = Array.from({ length: QA.length }, (_, i) => i);
     const useRandom = opts.randomOrder ?? true;
-    setOrder(useRandom ? shuffle(indices, seed) : indices);
+    return useRandom ? shuffle(indices, seed) : indices;
   }, [opts.seed, QA.length, opts.randomOrder]);
-
-  /**
-   * 指定されたインデックスの問題をロードする
-   * @param nextIdx ロードする問題のインデックス
-   */
-  const loadPair = useCallback(
-    (nextIdx: number) => {
-      const pairIndex = order[nextIdx] ?? 0;
-      const pair: QAPair = QA[pairIndex] ?? QA[0];
-      const learning = !!opts.learningMode;
-
-      progressingRef.current = false;
-
-      setState((s) => ({
-        ...s,
-        index: nextIdx,
-        questionJa: pair.ja,
-        questionJaPlain: pair.jaPlain,
-        answerEn: pair.en,
-        questionImg: pair.img,
-        typed: "",
-        correctMap: [],
-        showHint: learning,
-        problemHasMistake: false,
-        problemUsedHint: false,
-        hintStep: 0,
-        learningPhase: "study",
-      }));
-    },
-    [order, opts.learningMode, QA],
-  );
 
   /**
    * セッションを開始する
    * 全ての状態をリセットして最初の問題から始める
    */
   const start = useCallback(() => {
-    initOrder();
-    startedRef.current = true;
+    const nextOrder = createOrder();
+    const firstPairIndex = nextOrder[0] ?? 0;
+    const firstPair = QA[firstPairIndex];
     const now = Date.now();
     setNowMs(now);
+    setOrder(nextOrder);
 
     // 集計をリセット
     mistakesSetRef.current.clear();
@@ -157,12 +127,12 @@ export function useTypingEngine(
     const learning = !!opts.learningMode;
     setState({
       started: true,
-      finished: false,
+      finished: !firstPair,
       startAt: now,
-      questionJa: "",
-      questionJaPlain: "",
-      answerEn: "",
-      questionImg: undefined,
+      questionJa: firstPair?.ja ?? "",
+      questionJaPlain: firstPair?.jaPlain ?? "",
+      answerEn: firstPair?.en ?? "",
+      questionImg: firstPair?.img,
       typed: "",
       correctMap: [],
       showHint: learning,
@@ -175,7 +145,7 @@ export function useTypingEngine(
       hintStep: 0,
       learningPhase: "study",
     });
-  }, [initOrder, opts.learningMode]);
+  }, [createOrder, opts.learningMode, QA]);
 
   /**
    * ストップウォッチの更新
@@ -187,21 +157,6 @@ export function useTypingEngine(
     const id = setInterval(() => setNowMs(Date.now()), tickMs);
     return () => clearInterval(id);
   }, [state.started, state.finished, tickMs]);
-
-  /**
-   * 最初の問題をロード
-   * セッション開始時に自動的に最初の問題を表示
-   */
-  useEffect(() => {
-    if (
-      state.started &&
-      startedRef.current &&
-      order.length > 0 &&
-      state.answerEn === ""
-    ) {
-      loadPair(0);
-    }
-  }, [state.started, order, state.answerEn, loadPair]);
 
   /**
    * 学習モードの study 段階で最初の音声を再生

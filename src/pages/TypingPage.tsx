@@ -524,7 +524,7 @@ export default function Typing({
             if (ch === "\n") {
               e.preventDefault();
               if (!engine.state.started) {
-                engine.start();
+                handleStart();
                 return;
               } else if (!engine.state.finished) {
                 engine.stop();
